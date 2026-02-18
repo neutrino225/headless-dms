@@ -31,13 +31,15 @@ const SEED = {
 const NOW = new Date();
 
 async function seed() {
-  console.log('🌱 Seeding database...');
+  console.log('Seeding database...');
 
   // ── Users ──────────────────────────────────────────────────────────────────
   await db.insert(users).values([
     {
       id: SEED.adminId,
       email: 'admin@headless-dms.dev',
+      // bcrypt hash of 'admin123' (cost 10) — for local dev only
+      passwordHash: '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
       role: UserRole.ADMIN,
       createdAt: NOW,
       updatedAt: NOW,
@@ -45,6 +47,8 @@ async function seed() {
     {
       id: SEED.userId,
       email: 'alice@headless-dms.dev',
+      // bcrypt hash of 'alice123' (cost 10) — for local dev only
+      passwordHash: '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
       role: UserRole.USER,
       createdAt: NOW,
       updatedAt: NOW,
@@ -101,11 +105,11 @@ async function seed() {
   }).onConflictDoNothing();
   console.log('  ✓ audit_logs');
 
-  console.log('\n✅ Seed complete.');
+  console.log('\nSeed complete.');
   await pool.end();
 }
 
 seed().catch((err) => {
-  console.error('❌ Seed failed:', err);
+  console.error('Seed failed:', err);
   process.exit(1);
 });

@@ -6,10 +6,14 @@ import { UserRole } from './user.enums';
 
 /**
  * Domain interface for User.
+ *
+ * `passwordHash` is the bcrypt hash of the user's password.
+ * The raw password never lives in the domain — only the hash.
  */
 export interface IUser extends IEntity<UserId> {
   readonly email: Email;
   readonly role: UserRole;
+  readonly passwordHash: string;
 }
 
 /**
@@ -20,15 +24,18 @@ export type SerializedUser = Serialized<IUser>;
 export class User extends BaseEntity<UserId> implements IUser {
   readonly email: Email;
   readonly role: UserRole;
+  readonly passwordHash: string;
 
   private constructor(data: IUser) {
     super(data);
     this.email = data.email;
     this.role = data.role;
+    this.passwordHash = data.passwordHash;
   }
 
   /**
    * Factory: creates a new User with a generated ID and timestamps.
+   * Caller is responsible for hashing the password before passing it in.
    */
   static create(data: CreateEntity<IUser>): Result<User, Error> {
     const now = DateTime.now();
@@ -50,6 +57,7 @@ export class User extends BaseEntity<UserId> implements IUser {
       id: UserId.fromTrusted(raw.id),
       email: Email.fromTrusted(raw.email),
       role: raw.role as UserRole,
+      passwordHash: raw.passwordHash,
       createdAt: DateTime.from(raw.createdAt),
       updatedAt: DateTime.from(raw.updatedAt),
     });
@@ -60,6 +68,7 @@ export class User extends BaseEntity<UserId> implements IUser {
       ...this._serialize(),
       email: Email.toString(this.email),
       role: this.role,
+      passwordHash: this.passwordHash,
     };
   }
 }

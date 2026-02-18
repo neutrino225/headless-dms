@@ -42,6 +42,10 @@ export const TEST_IDS = {
 const TestUserSchema = S.Struct({
   id: S.String.annotations(refined.uuid()),
   email: S.String.annotations(refined.email()),
+  passwordHash: S.String.annotations({
+    arbitrary: () => (fc: any) =>
+      fc.constant('$2b$10$hashedpasswordfortesting1234567890abcdef'),
+  }),
   role: S.Literal(UserRole.USER, UserRole.ADMIN).annotations({
     arbitrary: () => (fc: any) => fc.constantFrom(UserRole.USER, UserRole.ADMIN),
   }),
@@ -59,6 +63,7 @@ function sampleUser(): TestUserData {
 export interface UserOverrides {
   id?: UserId;
   email?: string;
+  passwordHash?: string;
   role?: UserRole;
 }
 
@@ -67,6 +72,7 @@ export function makeUser(overrides: UserOverrides = {}): User {
   return User.fromSerialized({
     id: overrides.id ?? sample.id,
     email: overrides.email ?? sample.email,
+    passwordHash: overrides.passwordHash ?? sample.passwordHash,
     role: overrides.role ?? UserRole.USER,
     createdAt: sample.createdAt,
     updatedAt: sample.updatedAt,

@@ -7,6 +7,7 @@ export const userRoleEnum = pgEnum("user_role", Object.values(UserRole) as [stri
 export const users = pgTable("users", {
     ...SharedColumns,
     email: varchar("email", { length: 320 }).notNull(),
+    passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
     role: userRoleEnum("role").notNull(),
 }, (t) => [
     uniqueIndex("uq_users_email").on(t.email),
