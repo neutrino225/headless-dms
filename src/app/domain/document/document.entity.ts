@@ -10,6 +10,7 @@ import { BaseEntity, Serialized, IEntity, CreateEntity } from '@domain/shared/ba
  */
 export interface IDocument extends IEntity<DocumentId> {
   readonly name: string;
+  readonly description: string | null;
   readonly ownerId: UserId;
   readonly isArchived: boolean;
 }
@@ -21,12 +22,14 @@ export type SerializedDocument = Serialized<IDocument>;
 
 export class Document extends BaseEntity<DocumentId> implements IDocument {
   readonly name: string;
+  readonly description: string | null;
   readonly ownerId: UserId;
   readonly isArchived: boolean;
 
   private constructor(data: IDocument) {
     super(data);
     this.name = data.name;
+    this.description = data.description;
     this.ownerId = data.ownerId;
     this.isArchived = data.isArchived;
   }
@@ -52,6 +55,7 @@ export class Document extends BaseEntity<DocumentId> implements IDocument {
     return new Document({
       id: DocumentId.fromTrusted(raw.id),
       name: raw.name,
+      description: raw.description ?? null,
       ownerId: UserId.fromTrusted(raw.ownerId),
       isArchived: raw.isArchived,
       createdAt: DateTime.from(raw.createdAt),
@@ -63,6 +67,7 @@ export class Document extends BaseEntity<DocumentId> implements IDocument {
     return {
       ...this._serialize(),
       name: this.name,
+      description: this.description,
       ownerId: UserId.toString(this.ownerId),
       isArchived: this.isArchived,
     };

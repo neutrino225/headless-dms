@@ -85,6 +85,10 @@ const TestDocumentSchema = S.Struct({
     arbitrary: () => (fc: any) =>
       fc.constant(null).map(() => faker.system.fileName({ extensionCount: 0 })),
   }),
+  description: S.NullOr(S.String).annotations({
+    arbitrary: () => (fc: any) =>
+      fc.option(fc.constant(null).map(() => faker.lorem.sentence()), { nil: null }),
+  }),
   ownerId: S.String.annotations(refined.uuid()),
   isArchived: S.Boolean.annotations({
     arbitrary: () => (fc: any) => fc.boolean(),
@@ -103,6 +107,7 @@ function sampleDocument(): TestDocumentData {
 export interface DocumentOverrides {
   id?: DocumentId;
   name?: string;
+  description?: string | null;
   ownerId?: UserId;
   isArchived?: boolean;
 }
@@ -112,6 +117,7 @@ export function makeDocument(overrides: DocumentOverrides = {}): Document {
   return Document.fromSerialized({
     id: overrides.id ?? sample.id,
     name: overrides.name ?? sample.name,
+    description: overrides.description !== undefined ? overrides.description : sample.description,
     ownerId: overrides.ownerId ?? sample.ownerId,
     isArchived: overrides.isArchived ?? false,
     createdAt: sample.createdAt,

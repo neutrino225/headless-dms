@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { canAccess } from '@domain/services/document-access.service';
 import { AccessLevel } from '@domain/document/document.enums';
-import { UserRole } from '@domain/user/user.enums';
+import {
+  DocumentAccessDeniedError,
+  NoAccessPolicyError,
+} from '@domain/services/document-access.errors';
 import {
   makeUser,
   makeAdminUser,
@@ -18,25 +21,25 @@ describe('DocumentAccessService — canAccess()', () => {
     it('grants READ access to an admin with no policies', () => {
       const admin = makeAdminUser();
       const doc = makeDocument({ ownerId: TEST_IDS.user2 }); // admin is not owner
-      expect(canAccess(admin, doc, [], AccessLevel.READ)).toBe(true);
+      expect(canAccess(admin, doc, [], AccessLevel.READ).isOk()).toBe(true);
     });
 
     it('grants WRITE access to an admin with no policies', () => {
       const admin = makeAdminUser();
       const doc = makeDocument({ ownerId: TEST_IDS.user2 });
-      expect(canAccess(admin, doc, [], AccessLevel.WRITE)).toBe(true);
+      expect(canAccess(admin, doc, [], AccessLevel.WRITE).isOk()).toBe(true);
     });
 
     it('grants DELETE access to an admin with no policies', () => {
       const admin = makeAdminUser();
       const doc = makeDocument({ ownerId: TEST_IDS.user2 });
-      expect(canAccess(admin, doc, [], AccessLevel.DELETE)).toBe(true);
+      expect(canAccess(admin, doc, [], AccessLevel.DELETE).isOk()).toBe(true);
     });
 
     it('grants access to an admin even on an archived document', () => {
       const admin = makeAdminUser();
       const doc = makeArchivedDocument({ ownerId: TEST_IDS.user2 });
-      expect(canAccess(admin, doc, [], AccessLevel.DELETE)).toBe(true);
+      expect(canAccess(admin, doc, [], AccessLevel.DELETE).isOk()).toBe(true);
     });
   });
 
@@ -46,19 +49,19 @@ describe('DocumentAccessService — canAccess()', () => {
     it('grants READ access to the document owner', () => {
       const owner = makeUser({ id: TEST_IDS.user1 });
       const doc = makeDocument({ ownerId: TEST_IDS.user1 });
-      expect(canAccess(owner, doc, [], AccessLevel.READ)).toBe(true);
+      expect(canAccess(owner, doc, [], AccessLevel.READ).isOk()).toBe(true);
     });
 
     it('grants DELETE access to the document owner', () => {
       const owner = makeUser({ id: TEST_IDS.user1 });
       const doc = makeDocument({ ownerId: TEST_IDS.user1 });
-      expect(canAccess(owner, doc, [], AccessLevel.DELETE)).toBe(true);
+      expect(canAccess(owner, doc, [], AccessLevel.DELETE).isOk()).toBe(true);
     });
 
     it('grants access to owner even with no policies', () => {
       const owner = makeUser({ id: TEST_IDS.user1 });
       const doc = makeDocument({ ownerId: TEST_IDS.user1 });
-      expect(canAccess(owner, doc, [], AccessLevel.WRITE)).toBe(true);
+      expect(canAccess(owner, doc, [], AccessLevel.WRITE).isOk()).toBe(true);
     });
   });
 
@@ -74,7 +77,7 @@ describe('DocumentAccessService — canAccess()', () => {
         accessLevel: AccessLevel.READ,
       });
 
-      expect(canAccess(user, doc, [policy], AccessLevel.READ)).toBe(true);
+      expect(canAccess(user, doc, [policy], AccessLevel.READ).isOk()).toBe(true);
     });
 
     it('denies WRITE access when user only has a READ policy', () => {
@@ -86,7 +89,9 @@ describe('DocumentAccessService — canAccess()', () => {
         accessLevel: AccessLevel.READ,
       });
 
-      expect(canAccess(user, doc, [policy], AccessLevel.WRITE)).toBe(false);
+      const result = canAccess(user, doc, [policy], AccessLevel.WRITE);
+      expect(result.isErr()).toBe(true);
+      expect(result.unwrapErr()).toBeInstanceOf(DocumentAccessDeniedError);
     });
 
     it('grants WRITE and READ access when user has a WRITE policy', () => {
@@ -98,9 +103,12 @@ describe('DocumentAccessService — canAccess()', () => {
         accessLevel: AccessLevel.WRITE,
       });
 
-      expect(canAccess(user, doc, [policy], AccessLevel.READ)).toBe(true);
-      expect(canAccess(user, doc, [policy], AccessLevel.WRITE)).toBe(true);
-      expect(canAccess(user, doc, [policy], AccessLevel.DELETE)).toBe(false);
+      expect(canAccess(user, doc, [policy], AccessLevel.READ).isOk()).toBe(true);
+      expect(canAccess(user, doc, [policy], AccessLevel.WRITE).isOk()).toBe(true);
+
+      const deleteResult = canAccess(user, doc, [policy], AccessLevel.DELETE);
+      expect(deleteResult.isErr()).toBe(true);
+      expect(deleteResult.unwrapErr()).toBeInstanceOf(DocumentAccessDeniedError);
     });
 
     it('grants all access levels when user has a DELETE policy', () => {
@@ -112,9 +120,9 @@ describe('DocumentAccessService — canAccess()', () => {
         accessLevel: AccessLevel.DELETE,
       });
 
-      expect(canAccess(user, doc, [policy], AccessLevel.READ)).toBe(true);
-      expect(canAccess(user, doc, [policy], AccessLevel.WRITE)).toBe(true);
-      expect(canAccess(user, doc, [policy], AccessLevel.DELETE)).toBe(true);
+      expect(canAccess(user, doc, [policy], AccessLevel.READ).isOk()).toBe(true);
+      expect(canAccess(user, doc, [policy], AccessLevel.WRITE).isOk()).toBe(true);
+      expect(canAccess(user, doc, [policy], AccessLevel.DELETE).isOk()).toBe(true);
     });
 
     it('ignores policies for a different document', () => {
@@ -127,7 +135,9 @@ describe('DocumentAccessService — canAccess()', () => {
         accessLevel: AccessLevel.DELETE,
       });
 
-      expect(canAccess(user, doc, [policy], AccessLevel.READ)).toBe(false);
+      const result = canAccess(user, doc, [policy], AccessLevel.READ);
+      expect(result.isErr()).toBe(true);
+      expect(result.unwrapErr()).toBeInstanceOf(NoAccessPolicyError);
     });
 
     it('ignores policies for a different user', () => {
@@ -140,7 +150,9 @@ describe('DocumentAccessService — canAccess()', () => {
         accessLevel: AccessLevel.DELETE,
       });
 
-      expect(canAccess(user, doc, [policy], AccessLevel.READ)).toBe(false);
+      const result = canAccess(user, doc, [policy], AccessLevel.READ);
+      expect(result.isErr()).toBe(true);
+      expect(result.unwrapErr()).toBeInstanceOf(NoAccessPolicyError);
     });
   });
 
@@ -151,15 +163,21 @@ describe('DocumentAccessService — canAccess()', () => {
       const user = makeUser({ id: TEST_IDS.user2 });
       const doc = makeDocument({ ownerId: TEST_IDS.user1 });
 
-      expect(canAccess(user, doc, [], AccessLevel.READ)).toBe(false);
-      expect(canAccess(user, doc, [], AccessLevel.WRITE)).toBe(false);
-      expect(canAccess(user, doc, [], AccessLevel.DELETE)).toBe(false);
+      const readResult = canAccess(user, doc, [], AccessLevel.READ);
+      expect(readResult.isErr()).toBe(true);
+      expect(readResult.unwrapErr()).toBeInstanceOf(NoAccessPolicyError);
+
+      expect(canAccess(user, doc, [], AccessLevel.WRITE).isErr()).toBe(true);
+      expect(canAccess(user, doc, [], AccessLevel.DELETE).isErr()).toBe(true);
     });
 
     it('denies access when policies list is empty', () => {
       const user = makeUser({ id: TEST_IDS.user2 });
       const doc = makeDocument({ ownerId: TEST_IDS.user1 });
-      expect(canAccess(user, doc, [], AccessLevel.READ)).toBe(false);
+
+      const result = canAccess(user, doc, [], AccessLevel.READ);
+      expect(result.isErr()).toBe(true);
+      expect(result.unwrapErr()).toBeInstanceOf(NoAccessPolicyError);
     });
   });
 
@@ -169,7 +187,7 @@ describe('DocumentAccessService — canAccess()', () => {
     it('admin wins even if they have no explicit policy', () => {
       const admin = makeAdminUser();
       const doc = makeDocument({ ownerId: TEST_IDS.user1 }); // admin is not owner
-      expect(canAccess(admin, doc, [], AccessLevel.DELETE)).toBe(true);
+      expect(canAccess(admin, doc, [], AccessLevel.DELETE).isOk()).toBe(true);
     });
 
     it('owner wins even if they have a restrictive policy', () => {
@@ -182,7 +200,7 @@ describe('DocumentAccessService — canAccess()', () => {
         accessLevel: AccessLevel.READ,
       });
 
-      expect(canAccess(owner, doc, [policy], AccessLevel.DELETE)).toBe(true);
+      expect(canAccess(owner, doc, [policy], AccessLevel.DELETE).isOk()).toBe(true);
     });
   });
 });

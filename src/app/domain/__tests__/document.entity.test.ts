@@ -8,6 +8,7 @@ describe('Document entity', () => {
     it('creates a document with a generated UUID id', () => {
       const result = Document.create({
         name: 'My Report',
+        description: 'Q1 financial report',
         ownerId: TEST_IDS.user1,
         isArchived: false,
       });
@@ -15,6 +16,7 @@ describe('Document entity', () => {
       const doc = TestPatterns.Result.expectOk(result);
       expect(doc.id).toMatch(/^[0-9a-f-]{36}$/);
       expect(doc.name).toBe('My Report');
+      expect(doc.description).toBe('Q1 financial report');
       expect(doc.ownerId).toBe(TEST_IDS.user1);
       expect(doc.isArchived).toBe(false);
     });
@@ -22,7 +24,7 @@ describe('Document entity', () => {
     it('sets createdAt and updatedAt to the current time', () => {
       const before = new Date();
       const doc = TestPatterns.Result.expectOk(
-        Document.create({ name: 'Doc', ownerId: TEST_IDS.user1, isArchived: false }),
+        Document.create({ name: 'Doc', description: null, ownerId: TEST_IDS.user1, isArchived: false }),
       );
       const after = new Date();
 
@@ -32,10 +34,10 @@ describe('Document entity', () => {
 
     it('generates a unique id on each call', () => {
       const doc1 = TestPatterns.Result.expectOk(
-        Document.create({ name: 'A', ownerId: TEST_IDS.user1, isArchived: false }),
+        Document.create({ name: 'A', description: null, ownerId: TEST_IDS.user1, isArchived: false }),
       );
       const doc2 = TestPatterns.Result.expectOk(
-        Document.create({ name: 'B', ownerId: TEST_IDS.user1, isArchived: false }),
+        Document.create({ name: 'B', description: null, ownerId: TEST_IDS.user1, isArchived: false }),
       );
       expect(doc1.id).not.toBe(doc2.id);
     });
@@ -43,10 +45,11 @@ describe('Document entity', () => {
 
   describe('fromSerialized()', () => {
     it('rehydrates a document from factory-generated data', () => {
-      const doc = makeDocument({ id: TEST_IDS.doc1, name: 'Quarterly Report', ownerId: TEST_IDS.user1 });
+      const doc = makeDocument({ id: TEST_IDS.doc1, name: 'Quarterly Report', ownerId: TEST_IDS.user1, description: 'Q1 results' });
 
       expect(doc.id).toBe(TEST_IDS.doc1);
       expect(doc.name).toBe('Quarterly Report');
+      expect(doc.description).toBe('Q1 results');
       expect(doc.ownerId).toBe(TEST_IDS.user1);
       expect(doc.isArchived).toBe(false);
     });
@@ -66,6 +69,7 @@ describe('Document entity', () => {
 
       expect(restored.id).toBe(original.id);
       expect(restored.name).toBe(original.name);
+      expect(restored.description).toBe(original.description);
       expect(restored.ownerId).toBe(original.ownerId);
       expect(restored.isArchived).toBe(original.isArchived);
       expect(restored.createdAt.toISOString()).toBe(original.createdAt.toISOString());
@@ -77,6 +81,7 @@ describe('Document entity', () => {
 
       expect(typeof serialized.id).toBe('string');
       expect(typeof serialized.name).toBe('string');
+      expect(serialized.description === null || typeof serialized.description === 'string').toBe(true);
       expect(typeof serialized.ownerId).toBe('string');
       expect(typeof serialized.isArchived).toBe('boolean');
       expect(typeof serialized.createdAt).toBe('string');

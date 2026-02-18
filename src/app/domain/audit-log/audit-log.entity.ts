@@ -8,7 +8,6 @@ export interface IAuditLog extends IEntity {
   readonly userId: UUID;
   readonly action: AuditAction | string;
   readonly resourceId: UUID;
-  readonly ipAddress: string;
   readonly createdAt: DateTime;
 }
 
@@ -20,14 +19,12 @@ export class AuditLog extends BaseEntity implements IAuditLog {
   readonly userId: UUID;
   readonly action: AuditAction | string;
   readonly resourceId: UUID;
-  readonly ipAddress: string;
 
   private constructor(data: IAuditLog) {
     super(data);
     this.userId = data.userId;
     this.action = data.action;
     this.resourceId = data.resourceId;
-    this.ipAddress = data.ipAddress;
   }
 
   static create(data: CreateEntity<IAuditLog>): Result<AuditLog, Error> {
@@ -47,7 +44,6 @@ export class AuditLog extends BaseEntity implements IAuditLog {
       userId: UUID.fromTrusted(raw.userId),
       action: raw.action,
       resourceId: UUID.fromTrusted(raw.resourceId),
-      ipAddress: raw.ipAddress,
       createdAt: DateTime.from(raw.createdAt),
       updatedAt: DateTime.from(raw.updatedAt),
     });
@@ -59,7 +55,6 @@ export class AuditLog extends BaseEntity implements IAuditLog {
       userId: UUID.toString(this.userId),
       action: this.action,
       resourceId: UUID.toString(this.resourceId),
-      ipAddress: this.ipAddress,
     };
   }
 }
