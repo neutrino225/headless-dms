@@ -1,0 +1,30 @@
+import { NotFoundError, ValidationError, UnauthorizedError } from "@domain/shared/domain.error";
+
+export class UserNotFoundError extends NotFoundError {
+  readonly code = "USER_NOT_FOUND";
+
+  constructor(id: string) {
+    super(`User with ID ${id} not found`);
+  }
+}
+
+export class UserValidationError extends ValidationError {
+  readonly code = "USER_VALIDATION_ERROR";
+
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export class UserUnauthorizedError extends UnauthorizedError {
+  readonly code = "USER_UNAUTHORIZED";
+
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export type UserDomainError =
+  | UserNotFoundError
+  | UserValidationError
+  | UserUnauthorizedError;
