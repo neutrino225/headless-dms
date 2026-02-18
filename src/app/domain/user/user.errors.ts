@@ -24,7 +24,16 @@ export class UserUnauthorizedError extends UnauthorizedError {
   }
 }
 
+export class EmailAlreadyTakenError extends ValidationError {
+  readonly code = "EMAIL_ALREADY_TAKEN";
+
+  constructor(email: string) {
+    super(`Email ${email} is already taken`);
+  }
+}
+
 export type UserDomainError =
   | UserNotFoundError
   | UserValidationError
-  | UserUnauthorizedError;
+  | UserUnauthorizedError
+  | EmailAlreadyTakenError;
