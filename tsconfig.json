@@ -17,13 +17,13 @@
     "baseUrl": ".",
     "paths": {
       "@domain/*": [
-        "src/app/domain/*"
+        "src/domain/*"
       ],
       "@application/*": [
         "src/app/application/*"
       ],
       "@infra/*": [
-        "src/app/infra/*"
+        "src/infra/*"
       ],
       "@presentation/*": [
         "src/presentation/*"
