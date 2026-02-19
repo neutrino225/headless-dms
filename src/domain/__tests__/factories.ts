@@ -15,12 +15,14 @@ import { Document } from 'src/domain/document/document.entity';
 import { DocumentVersion } from 'src/domain/document/document-version.entity';
 import { User } from 'src/domain/user/user.entity';
 import { AccessPolicy } from 'src/domain/access-policy/access-policy.entity';
+import { AuditLog } from 'src/domain/audit-log/audit-log.entity';
 import {
   DocumentId,
   DocumentVersionId,
   UserId,
   AccessPolicyId,
 } from 'src/domain/utils/refined-types';
+import { AuditAction } from 'src/domain/audit-log/audit-log.enums';
 import { AccessLevel, DocumentStatus } from 'src/domain/document/document.enums';
 import { UserRole } from 'src/domain/user/user.enums';
 import { refined } from './utils/arbitrary.utils';
@@ -251,6 +253,63 @@ export function makeAccessPolicy(overrides: AccessPolicyOverrides = {}): AccessP
     documentId: overrides.documentId ?? sample.documentId,
     userId: overrides.userId ?? sample.userId,
     accessLevel: overrides.accessLevel ?? AccessLevel.READ,
+    createdAt: sample.createdAt,
+    updatedAt: sample.updatedAt,
+  });
+}
+
+// ─── AuditLog ─────────────────────────────────────────────────────────────────
+
+const TestAuditLogSchema = S.Struct({
+  id: S.String.annotations(refined.uuid()),
+  userId: S.String.annotations(refined.uuid()),
+  action: S.String.annotations({
+    arbitrary: () => (fc: any) =>
+      fc.constantFrom(...Object.values(AuditAction)),
+  }),
+  resourceId: S.String.annotations(refined.uuid()),
+  resourceType: S.Literal('document', 'user', 'policy').annotations({
+    arbitrary: () => (fc: any) => fc.constantFrom('document', 'user', 'policy'),
+  }),
+  metadata: S.NullOr(S.Record({ key: S.String, value: S.Unknown })).annotations({
+    arbitrary: () => (fc: any) =>
+      fc.option(
+        fc.record({
+          previousStatus: fc.constant('active'),
+          newStatus: fc.constant('archived'),
+        }),
+        { nil: null }
+      ),
+  }),
+  createdAt: S.String.annotations(refined.dateTime.past()),
+  updatedAt: S.String.annotations(refined.dateTime.recent()),
+});
+
+type TestAuditLogData = typeof TestAuditLogSchema.Type;
+
+function sampleAuditLog(): TestAuditLogData {
+  const arb = Arbitrary.make(TestAuditLogSchema);
+  return FastCheck.sample(arb, { numRuns: 1 })[0]!;
+}
+
+export interface AuditLogOverrides {
+  id?: string;
+  userId?: string;
+  action?: AuditAction | string;
+  resourceId?: string;
+  resourceType?: 'document' | 'user' | 'policy';
+  metadata?: Record<string, unknown> | null;
+}
+
+export function makeAuditLog(overrides: AuditLogOverrides = {}): AuditLog {
+  const sample = sampleAuditLog();
+  return AuditLog.fromSerialized({
+    id: overrides.id ?? sample.id,
+    userId: overrides.userId ?? sample.userId,
+    action: overrides.action ?? sample.action,
+    resourceId: overrides.resourceId ?? sample.resourceId,
+    resourceType: overrides.resourceType ?? sample.resourceType,
+    metadata: overrides.metadata !== undefined ? overrides.metadata : sample.metadata,
     createdAt: sample.createdAt,
     updatedAt: sample.updatedAt,
   });

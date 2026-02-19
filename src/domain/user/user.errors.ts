@@ -16,6 +16,14 @@ export class UserValidationError extends ValidationError {
   }
 }
 
+export class UserAlreadyExistsError extends ValidationError {
+  readonly code = "USER_ALREADY_EXISTS";
+
+  constructor(id: string) {
+    super(`User with ID ${id} already exists`);
+  }
+}
+
 export class UserUnauthorizedError extends UnauthorizedError {
   readonly code = "USER_UNAUTHORIZED";
 
@@ -36,4 +44,5 @@ export type UserDomainError =
   | UserNotFoundError
   | UserValidationError
   | UserUnauthorizedError
-  | EmailAlreadyTakenError;
+  | EmailAlreadyTakenError
+  | UserAlreadyExistsError;

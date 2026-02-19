@@ -1,46 +1,35 @@
-import type { Result } from "@carbonteq/fp";
+import { Result, Option } from "@carbonteq/fp";
 import type { BaseEntity } from "./base.entity";
 import type {
   AlreadyExistsError,
-  InvalidOperation,
   NotFoundError,
 } from "./base.errors";
 import type { Paginated, PaginationOptions } from "./pagination";
 
-export type RepositoryError =
-  | NotFoundError
-  | AlreadyExistsError
-  | InvalidOperation;
+export type RepositoryResult<T, E = Error> = Result<T, E>;
 
-type CommonRepoErrors = InvalidOperation;
+export abstract class BaseRepository<T extends BaseEntity<string>> {
+  abstract insert(entity: T): Promise<RepositoryResult<Option<T>, AlreadyExistsError>>;
+  abstract update(entity: T): Promise<RepositoryResult<Option<T>, NotFoundError>>;
 
-export type RepositoryResult<T, E = CommonRepoErrors> = Result<
-  T,
-  E | CommonRepoErrors
->;
-
-export abstract class BaseRepository<T extends BaseEntity> {
-  abstract insert(entity: T): Promise<RepositoryResult<T, AlreadyExistsError>>;
-  abstract update(entity: T): Promise<RepositoryResult<T, NotFoundError>>;
-
-  fetchAll?(): Promise<RepositoryResult<T[]>>;
+  fetchAll?(): Promise<RepositoryResult<Option<T[]>>>;
   fetchPaginated?(
     options: PaginationOptions,
-  ): Promise<RepositoryResult<Paginated<T>>>;
-  fetchById?(id: BaseEntity["id"]): Promise<RepositoryResult<T, NotFoundError>>;
+  ): Promise<RepositoryResult<Option<Paginated<T>>>>;
+  fetchById?(id: string): Promise<RepositoryResult<Option<T>, NotFoundError>>;
   deleteById?(
-    Id: BaseEntity["id"],
-  ): Promise<RepositoryResult<T, NotFoundError>>;
+    id: string,
+  ): Promise<RepositoryResult<Option<T>, NotFoundError>>;
   fetchBy?<U extends keyof T>(
     prop: U,
     val: T[U],
-  ): Promise<RepositoryResult<T, NotFoundError>>; // val: ValueForProp<T, U>
-  existsBy?<U extends keyof T>(
-    prop: U,
-    val: T[U],
+  ): Promise<RepositoryResult<Option<T>, NotFoundError>>;
+  existsBy?(
+    prop: string,
+    val: any,
   ): Promise<RepositoryResult<boolean>>;
   deleteBy?<U extends keyof T>(
     prop: U,
     val: T[U],
-  ): Promise<RepositoryResult<T, NotFoundError>>;
+  ): Promise<RepositoryResult<Option<T>, NotFoundError>>;
 }
