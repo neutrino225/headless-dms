@@ -61,8 +61,10 @@ async function seed() {
     id: SEED.docId,
     name: 'Q1 Financial Report',
     description: 'Quarterly financial report for Q1 2026',
-    isArchived: false,
     ownerId: SEED.adminId,
+    slug: 'q1-financial-report',
+    mimeType: 'application/pdf',
+    status: 'active',
     createdAt: NOW,
     updatedAt: NOW,
   }).onConflictDoNothing();
@@ -75,9 +77,9 @@ async function seed() {
     versionNumber: 1,
     storageKey: 'uploads/q1-financial-report-v1.pdf',
     mimeType: 'application/pdf',
-    fileSize: 204800,   // 200 KB
+    sizeBytes: 204800,  // 200 KB
     checksum: 'sha256:abc123def456',
-    createdBy: SEED.adminId,
+    uploadedBy: SEED.adminId,
     createdAt: NOW,
     updatedAt: NOW,
   }).onConflictDoNothing();
@@ -100,6 +102,7 @@ async function seed() {
     userId: SEED.adminId,
     action: AuditAction.DOCUMENT_CREATED,
     resourceId: SEED.docId,
+    resourceType: 'document',
     createdAt: NOW,
     updatedAt: NOW,
   }).onConflictDoNothing();

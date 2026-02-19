@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Document } from 'src/domain/document/document.entity';
-import { makeDocument, makeArchivedDocument, TEST_IDS } from './factories';
+import { DocumentStatus } from 'src/domain/document/document.enums';
+import { makeDocument, makeDocumentWithStatus, TEST_IDS } from './factories';
 import { TestPatterns } from './utils/test.helpers';
 
 describe('Document entity', () => {
@@ -10,7 +11,11 @@ describe('Document entity', () => {
         name: 'My Report',
         description: 'Q1 financial report',
         ownerId: TEST_IDS.user1,
-        isArchived: false,
+        slug: 'my-report',
+        mimeType: 'application/pdf' as any,
+        status: DocumentStatus.Active,
+        latestVersionId: null,
+        metadata: null,
       });
 
       const doc = TestPatterns.Result.expectOk(result);
@@ -18,13 +23,25 @@ describe('Document entity', () => {
       expect(doc.name).toBe('My Report');
       expect(doc.description).toBe('Q1 financial report');
       expect(doc.ownerId).toBe(TEST_IDS.user1);
-      expect(doc.isArchived).toBe(false);
+      expect(doc.slug).toBe('my-report');
+      expect(doc.status).toBe(DocumentStatus.Active);
+      expect(doc.latestVersionId).toBeNull();
+      expect(doc.metadata).toBeNull();
     });
 
     it('sets createdAt and updatedAt to the current time', () => {
       const before = new Date();
       const doc = TestPatterns.Result.expectOk(
-        Document.create({ name: 'Doc', description: null, ownerId: TEST_IDS.user1, isArchived: false }),
+        Document.create({
+          name: 'Doc',
+          description: null,
+          ownerId: TEST_IDS.user1,
+          slug: 'doc',
+          mimeType: 'application/pdf' as any,
+          status: DocumentStatus.Active,
+          latestVersionId: null,
+          metadata: null,
+        }),
       );
       const after = new Date();
 
@@ -33,37 +50,50 @@ describe('Document entity', () => {
     });
 
     it('generates a unique id on each call', () => {
-      const doc1 = TestPatterns.Result.expectOk(
-        Document.create({ name: 'A', description: null, ownerId: TEST_IDS.user1, isArchived: false }),
-      );
-      const doc2 = TestPatterns.Result.expectOk(
-        Document.create({ name: 'B', description: null, ownerId: TEST_IDS.user1, isArchived: false }),
-      );
+      const makeDoc = (slug: string) => Document.create({
+        name: 'A', description: null, ownerId: TEST_IDS.user1,
+        slug, mimeType: 'application/pdf' as any,
+        status: DocumentStatus.Active, latestVersionId: null, metadata: null,
+      });
+      const doc1 = TestPatterns.Result.expectOk(makeDoc('slug-a'));
+      const doc2 = TestPatterns.Result.expectOk(makeDoc('slug-b'));
       expect(doc1.id).not.toBe(doc2.id);
     });
   });
 
   describe('fromSerialized()', () => {
     it('rehydrates a document from factory-generated data', () => {
-      const doc = makeDocument({ id: TEST_IDS.doc1, name: 'Quarterly Report', ownerId: TEST_IDS.user1, description: 'Q1 results' });
+      const doc = makeDocument({
+        id: TEST_IDS.doc1,
+        name: 'Quarterly Report',
+        ownerId: TEST_IDS.user1,
+        description: 'Q1 results',
+        slug: 'quarterly-report',
+        status: DocumentStatus.Active,
+      });
 
       expect(doc.id).toBe(TEST_IDS.doc1);
       expect(doc.name).toBe('Quarterly Report');
       expect(doc.description).toBe('Q1 results');
       expect(doc.ownerId).toBe(TEST_IDS.user1);
-      expect(doc.isArchived).toBe(false);
+      expect(doc.slug).toBe('quarterly-report');
+      expect(doc.status).toBe(DocumentStatus.Active);
     });
 
     it('factory generates realistic timestamps', () => {
       const doc = makeDocument();
-      // createdAt should be a valid ISO date in the past
       expect(new Date(doc.createdAt.toISOString()).getTime()).toBeLessThanOrEqual(Date.now());
+    });
+
+    it('makeDocumentWithStatus produces an archived document', () => {
+      const doc = makeDocumentWithStatus(DocumentStatus.Archived);
+      expect(doc.status).toBe(DocumentStatus.Archived);
     });
   });
 
   describe('serialize()', () => {
     it('round-trips through serialize → fromSerialized', () => {
-      const original = makeDocument({ name: 'Round Trip Doc' });
+      const original = makeDocument({ name: 'Round Trip Doc', metadata: { department: 'finance' } });
       const serialized = original.serialize();
       const restored = Document.fromSerialized(serialized);
 
@@ -71,7 +101,10 @@ describe('Document entity', () => {
       expect(restored.name).toBe(original.name);
       expect(restored.description).toBe(original.description);
       expect(restored.ownerId).toBe(original.ownerId);
-      expect(restored.isArchived).toBe(original.isArchived);
+      expect(restored.slug).toBe(original.slug);
+      expect(restored.status).toBe(original.status);
+      expect(restored.latestVersionId).toBe(original.latestVersionId);
+      expect(restored.metadata).toEqual(original.metadata);
       expect(restored.createdAt.toISOString()).toBe(original.createdAt.toISOString());
     });
 
@@ -83,7 +116,9 @@ describe('Document entity', () => {
       expect(typeof serialized.name).toBe('string');
       expect(serialized.description === null || typeof serialized.description === 'string').toBe(true);
       expect(typeof serialized.ownerId).toBe('string');
-      expect(typeof serialized.isArchived).toBe('boolean');
+      expect(typeof serialized.slug).toBe('string');
+      expect(typeof serialized.mimeType).toBe('string');
+      expect(typeof serialized.status).toBe('string');
       expect(typeof serialized.createdAt).toBe('string');
       expect(typeof serialized.updatedAt).toBe('string');
     });

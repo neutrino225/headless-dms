@@ -21,7 +21,7 @@ import {
   UserId,
   AccessPolicyId,
 } from 'src/domain/utils/refined-types';
-import { AccessLevel } from 'src/domain/document/document.enums';
+import { AccessLevel, DocumentStatus } from 'src/domain/document/document.enums';
 import { UserRole } from 'src/domain/user/user.enums';
 import { refined } from './utils/arbitrary.utils';
 
@@ -49,6 +49,13 @@ const TestUserSchema = S.Struct({
   role: S.Literal(UserRole.USER, UserRole.ADMIN).annotations({
     arbitrary: () => (fc: any) => fc.constantFrom(UserRole.USER, UserRole.ADMIN),
   }),
+  displayName: S.NullOr(S.String).annotations({
+    arbitrary: () => (fc: any) =>
+      fc.option(fc.constant(null).map(() => faker.person.fullName()), { nil: null }),
+  }),
+  isActive: S.Boolean.annotations({
+    arbitrary: () => (fc: any) => fc.constant(true),
+  }),
   createdAt: S.String.annotations(refined.dateTime.past()),
   updatedAt: S.String.annotations(refined.dateTime.recent()),
 });
@@ -65,6 +72,8 @@ export interface UserOverrides {
   email?: string;
   passwordHash?: string;
   role?: UserRole;
+  displayName?: string | null;
+  isActive?: boolean;
 }
 
 export function makeUser(overrides: UserOverrides = {}): User {
@@ -74,6 +83,8 @@ export function makeUser(overrides: UserOverrides = {}): User {
     email: overrides.email ?? sample.email,
     passwordHash: overrides.passwordHash ?? sample.passwordHash,
     role: overrides.role ?? UserRole.USER,
+    displayName: overrides.displayName !== undefined ? overrides.displayName : sample.displayName,
+    isActive: overrides.isActive ?? true,
     createdAt: sample.createdAt,
     updatedAt: sample.updatedAt,
   });
@@ -96,8 +107,19 @@ const TestDocumentSchema = S.Struct({
       fc.option(fc.constant(null).map(() => faker.lorem.sentence()), { nil: null }),
   }),
   ownerId: S.String.annotations(refined.uuid()),
-  isArchived: S.Boolean.annotations({
-    arbitrary: () => (fc: any) => fc.boolean(),
+  slug: S.String.annotations({
+    arbitrary: () => (fc: any) =>
+      fc.constant(null).map(() => faker.helpers.slugify(faker.lorem.words(3))),
+  }),
+  mimeType: S.String.annotations(refined.mimeType()),
+  status: S.Literal(DocumentStatus.Active, DocumentStatus.Archived, DocumentStatus.Deleted).annotations({
+    arbitrary: () => (fc: any) => fc.constant(DocumentStatus.Active),
+  }),
+  latestVersionId: S.NullOr(S.String).annotations({
+    arbitrary: () => (fc: any) => fc.constant(null),
+  }),
+  metadata: S.NullOr(S.Record({ key: S.String, value: S.Unknown })).annotations({
+    arbitrary: () => (fc: any) => fc.constant(null),
   }),
   createdAt: S.String.annotations(refined.dateTime.past()),
   updatedAt: S.String.annotations(refined.dateTime.recent()),
@@ -115,7 +137,11 @@ export interface DocumentOverrides {
   name?: string;
   description?: string | null;
   ownerId?: UserId;
-  isArchived?: boolean;
+  slug?: string;
+  mimeType?: string;
+  status?: DocumentStatus;
+  latestVersionId?: DocumentVersionId | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export function makeDocument(overrides: DocumentOverrides = {}): Document {
@@ -125,14 +151,18 @@ export function makeDocument(overrides: DocumentOverrides = {}): Document {
     name: overrides.name ?? sample.name,
     description: overrides.description !== undefined ? overrides.description : sample.description,
     ownerId: overrides.ownerId ?? sample.ownerId,
-    isArchived: overrides.isArchived ?? false,
+    slug: overrides.slug ?? sample.slug,
+    mimeType: overrides.mimeType ?? sample.mimeType,
+    status: overrides.status ?? DocumentStatus.Active,
+    latestVersionId: overrides.latestVersionId !== undefined ? overrides.latestVersionId : null,
+    metadata: overrides.metadata !== undefined ? overrides.metadata : sample.metadata,
     createdAt: sample.createdAt,
     updatedAt: sample.updatedAt,
   });
 }
 
-export function makeArchivedDocument(overrides: DocumentOverrides = {}): Document {
-  return makeDocument({ isArchived: true, ...overrides });
+export function makeDocumentWithStatus(status: DocumentStatus, overrides: DocumentOverrides = {}): Document {
+  return makeDocument({ status, ...overrides });
 }
 
 // ─── DocumentVersion ──────────────────────────────────────────────────────────
@@ -145,9 +175,9 @@ const TestDocumentVersionSchema = S.Struct({
   }),
   storageKey: S.String.annotations(refined.storageKey()),
   mimeType: S.String.annotations(refined.mimeType()),
-  fileSize: S.Number.annotations(refined.fileSize()),
+  sizeBytes: S.Number.annotations(refined.fileSize()),
   checksum: S.String.annotations(refined.checksum()),
-  createdBy: S.String.annotations(refined.uuid()),
+  uploadedBy: S.String.annotations(refined.uuid()),
   createdAt: S.String.annotations(refined.dateTime.past()),
   updatedAt: S.String.annotations(refined.dateTime.past()),
 });
@@ -165,9 +195,9 @@ export interface DocumentVersionOverrides {
   versionNumber?: number;
   storageKey?: string;
   mimeType?: string;
-  fileSize?: number;
+  sizeBytes?: number;
   checksum?: string;
-  createdBy?: UserId;
+  uploadedBy?: UserId;
 }
 
 export function makeDocumentVersion(overrides: DocumentVersionOverrides = {}): DocumentVersion {
@@ -178,9 +208,9 @@ export function makeDocumentVersion(overrides: DocumentVersionOverrides = {}): D
     versionNumber: overrides.versionNumber ?? sample.versionNumber,
     storageKey: overrides.storageKey ?? sample.storageKey,
     mimeType: overrides.mimeType ?? sample.mimeType,
-    fileSize: overrides.fileSize ?? sample.fileSize,
+    sizeBytes: overrides.sizeBytes ?? sample.sizeBytes,
     checksum: overrides.checksum ?? sample.checksum,
-    createdBy: overrides.createdBy ?? sample.createdBy,
+    uploadedBy: overrides.uploadedBy ?? sample.uploadedBy,
     createdAt: sample.createdAt,
     updatedAt: sample.updatedAt,
   });

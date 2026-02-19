@@ -1,4 +1,5 @@
 import { Document } from './document.entity';
+import { DocumentStatus } from './document.enums';
 import { UserId } from 'src/domain/utils/refined-types';
 
 /**
@@ -7,10 +8,10 @@ import { UserId } from 'src/domain/utils/refined-types';
  */
 
 /**
- * Returns true if the document has been archived (soft-deleted).
+ * Returns true if the document has been archived (status === Archived).
  */
 export function isArchived(doc: Document): boolean {
-  return doc.isArchived;
+  return doc.status === DocumentStatus.Archived;
 }
 
 /**

@@ -14,6 +14,10 @@ export interface IUser extends IEntity<UserId> {
   readonly email: Email;
   readonly role: UserRole;
   readonly passwordHash: string;
+  /** Optional display name shown in the UI. Null if not set. */
+  readonly displayName: string | null;
+  /** Whether the account is active. Inactive users cannot log in. */
+  readonly isActive: boolean;
 }
 
 /**
@@ -25,12 +29,16 @@ export class User extends BaseEntity<UserId> implements IUser {
   readonly email: Email;
   readonly role: UserRole;
   readonly passwordHash: string;
+  readonly displayName: string | null;
+  readonly isActive: boolean;
 
   private constructor(data: IUser) {
     super(data);
     this.email = data.email;
     this.role = data.role;
     this.passwordHash = data.passwordHash;
+    this.displayName = data.displayName;
+    this.isActive = data.isActive;
   }
 
   /**
@@ -58,6 +66,8 @@ export class User extends BaseEntity<UserId> implements IUser {
       email: Email.fromTrusted(raw.email),
       role: raw.role as UserRole,
       passwordHash: raw.passwordHash,
+      displayName: raw.displayName ?? null,
+      isActive: raw.isActive,
       createdAt: DateTime.from(raw.createdAt),
       updatedAt: DateTime.from(raw.updatedAt),
     });
@@ -69,6 +79,8 @@ export class User extends BaseEntity<UserId> implements IUser {
       email: Email.toString(this.email),
       role: this.role,
       passwordHash: this.passwordHash,
+      displayName: this.displayName,
+      isActive: this.isActive,
     };
   }
 }

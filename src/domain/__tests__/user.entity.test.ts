@@ -14,36 +14,48 @@ describe('User entity', () => {
         email: 'bob@example.com' as any,
         role: UserRole.USER,
         passwordHash: FAKE_HASH,
+        displayName: null,
+        isActive: true,
       });
 
       const user = TestPatterns.Result.expectOk(result);
       expect(user.id).toMatch(/^[0-9a-f-]{36}$/);
       expect(user.role).toBe(UserRole.USER);
       expect(user.passwordHash).toBe(FAKE_HASH);
+      expect(user.displayName).toBeNull();
+      expect(user.isActive).toBe(true);
     });
 
     it('creates an admin user', () => {
       const user = TestPatterns.Result.expectOk(
-        User.create({ email: 'admin@example.com' as any, role: UserRole.ADMIN, passwordHash: FAKE_HASH }),
+        User.create({ email: 'admin@example.com' as any, role: UserRole.ADMIN, passwordHash: FAKE_HASH, displayName: 'Admin', isActive: true }),
       );
       expect(user.role).toBe(UserRole.ADMIN);
+      expect(user.displayName).toBe('Admin');
     });
 
     it('generates unique ids on each call', () => {
       const u1 = TestPatterns.Result.expectOk(
-        User.create({ email: 'a@a.com' as any, role: UserRole.USER, passwordHash: FAKE_HASH }),
+        User.create({ email: 'a@a.com' as any, role: UserRole.USER, passwordHash: FAKE_HASH, displayName: null, isActive: true }),
       );
       const u2 = TestPatterns.Result.expectOk(
-        User.create({ email: 'b@b.com' as any, role: UserRole.USER, passwordHash: FAKE_HASH }),
+        User.create({ email: 'b@b.com' as any, role: UserRole.USER, passwordHash: FAKE_HASH, displayName: null, isActive: true }),
       );
       expect(u1.id).not.toBe(u2.id);
     });
 
     it('stores the passwordHash exactly as provided', () => {
       const user = TestPatterns.Result.expectOk(
-        User.create({ email: 'c@c.com' as any, role: UserRole.USER, passwordHash: FAKE_HASH }),
+        User.create({ email: 'c@c.com' as any, role: UserRole.USER, passwordHash: FAKE_HASH, displayName: null, isActive: true }),
       );
       expect(user.passwordHash).toBe(FAKE_HASH);
+    });
+
+    it('defaults isActive to true', () => {
+      const user = TestPatterns.Result.expectOk(
+        User.create({ email: 'd@d.com' as any, role: UserRole.USER, passwordHash: FAKE_HASH, displayName: null, isActive: true }),
+      );
+      expect(user.isActive).toBe(true);
     });
   });
 
@@ -55,6 +67,7 @@ describe('User entity', () => {
       expect(user.email).toBe('alice@example.com');
       expect(user.role).toBe(UserRole.USER);
       expect(typeof user.passwordHash).toBe('string');
+      expect(user.isActive).toBe(true);
     });
 
     it('factory generates realistic email addresses', () => {
@@ -66,11 +79,16 @@ describe('User entity', () => {
       const admin = makeAdminUser();
       expect(admin.role).toBe(UserRole.ADMIN);
     });
+
+    it('rehydrates displayName when set', () => {
+      const user = makeUser({ displayName: 'Alice Wonder' });
+      expect(user.displayName).toBe('Alice Wonder');
+    });
   });
 
   describe('serialize()', () => {
     it('round-trips through serialize → fromSerialized', () => {
-      const original = makeUser({ email: 'roundtrip@example.com' });
+      const original = makeUser({ email: 'roundtrip@example.com', displayName: 'RT User' });
       const serialized = original.serialize();
       const restored = User.fromSerialized(serialized);
 
@@ -78,6 +96,8 @@ describe('User entity', () => {
       expect(restored.email).toBe(original.email);
       expect(restored.role).toBe(original.role);
       expect(restored.passwordHash).toBe(original.passwordHash);
+      expect(restored.displayName).toBe(original.displayName);
+      expect(restored.isActive).toBe(original.isActive);
     });
 
     it('serializes all fields to primitives', () => {
@@ -88,13 +108,14 @@ describe('User entity', () => {
       expect(typeof serialized.email).toBe('string');
       expect(typeof serialized.role).toBe('string');
       expect(typeof serialized.passwordHash).toBe('string');
+      expect(typeof serialized.isActive).toBe('boolean');
+      expect(serialized.displayName === null || typeof serialized.displayName === 'string').toBe(true);
       expect(typeof serialized.createdAt).toBe('string');
     });
 
     it('does not expose the raw password — only the hash', () => {
       const user = makeUser({ passwordHash: FAKE_HASH });
       const serialized = user.serialize();
-      // The serialized form has passwordHash, not a raw password field
       expect('passwordHash' in serialized).toBe(true);
       expect(serialized.passwordHash).toBe(FAKE_HASH);
     });

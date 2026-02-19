@@ -8,9 +8,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@domain': resolve(__dirname, 'src/app/domain'),
-      '@application': resolve(__dirname, 'src/app/application'),
-      '@infra': resolve(__dirname, 'src/app/infra'),
+      'src': resolve(__dirname, 'src'),
+      '@domain': resolve(__dirname, 'src/domain'),
+      '@application': resolve(__dirname, 'src/application'),
+      '@infra': resolve(__dirname, 'src/infra'),
       '@presentation': resolve(__dirname, 'src/presentation'),
       '@shared': resolve(__dirname, 'src/shared'),
     },

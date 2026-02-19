@@ -9,10 +9,11 @@ import {
   makeUser,
   makeAdminUser,
   makeDocument,
-  makeArchivedDocument,
+  makeDocumentWithStatus,
   makeAccessPolicy,
   TEST_IDS,
 } from './factories';
+import { DocumentStatus } from 'src/domain/document/document.enums';
 
 describe('DocumentAccessService — canAccess()', () => {
   // ─── Rule 1: Admin always wins ──────────────────────────────────────────────
@@ -38,7 +39,7 @@ describe('DocumentAccessService — canAccess()', () => {
 
     it('grants access to an admin even on an archived document', () => {
       const admin = makeAdminUser();
-      const doc = makeArchivedDocument({ ownerId: TEST_IDS.user2 });
+      const doc = makeDocumentWithStatus(DocumentStatus.Archived, { ownerId: TEST_IDS.user2 });
       expect(canAccess(admin, doc, [], AccessLevel.DELETE).isOk()).toBe(true);
     });
   });

@@ -8,6 +8,13 @@
       "when": 1771429151702,
       "tag": "0000_flashy_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771489912899,
+      "tag": "0001_slow_lady_deathstrike",
+      "breakpoints": true
     }
   ]
 }

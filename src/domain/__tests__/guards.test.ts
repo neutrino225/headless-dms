@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { isArchived, isOwner } from 'src/domain/document/document.guards';
 import { isAdmin } from 'src/domain/user/user.guards';
 import { hasAccess } from 'src/domain/access-policy/access-policy.guards';
-import { AccessLevel } from 'src/domain/document/document.enums';
+import { AccessLevel, DocumentStatus } from 'src/domain/document/document.enums';
 import { UserRole } from 'src/domain/user/user.enums';
 import {
   makeDocument,
-  makeArchivedDocument,
+  makeDocumentWithStatus,
   makeUser,
   makeAdminUser,
   makeAccessPolicy,
@@ -16,7 +16,7 @@ import {
 describe('document.guards', () => {
   describe('isArchived()', () => {
     it('returns true for an archived document', () => {
-      expect(isArchived(makeArchivedDocument())).toBe(true);
+      expect(isArchived(makeDocumentWithStatus(DocumentStatus.Archived))).toBe(true);
     });
 
     it('returns false for an active document', () => {

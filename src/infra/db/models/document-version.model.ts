@@ -10,9 +10,9 @@ export const documentVersions = pgTable("document_versions", {
     versionNumber: integer("versionNumber").notNull(),
     storageKey: text("storageKey").notNull(),
     mimeType: text("mimeType").notNull(),
-    fileSize: bigint("fileSize", { mode: "number" }).notNull(),
+    sizeBytes: bigint("sizeBytes", { mode: "number" }).notNull(),
     checksum: text("checksum").notNull(),
-    createdBy: UuidCol("createdBy").notNull().references(() => users.id, { onDelete: "cascade" }),
+    uploadedBy: UuidCol("uploadedBy").notNull().references(() => users.id, { onDelete: "cascade" }),
 }, (t) => [
     check("chk_version_positive", sql`${t.versionNumber} >= 1`),
     unique("uq_doc_version").on(t.documentId, t.versionNumber),

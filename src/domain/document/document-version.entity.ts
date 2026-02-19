@@ -13,9 +13,11 @@ export interface IDocumentVersion extends IEntity<DocumentVersionId> {
   readonly versionNumber: number;
   readonly storageKey: StorageKey;
   readonly mimeType: MimeType;
-  readonly fileSize: number;
+  /** File size in bytes. */
+  readonly sizeBytes: number;
   readonly checksum: Checksum;
-  readonly createdBy: UserId;
+  /** The user who uploaded this specific version. */
+  readonly uploadedBy: UserId;
 }
 
 /**
@@ -28,9 +30,9 @@ export class DocumentVersion extends BaseEntity<DocumentVersionId> implements ID
   readonly versionNumber: number;
   readonly storageKey: StorageKey;
   readonly mimeType: MimeType;
-  readonly fileSize: number;
+  readonly sizeBytes: number;
   readonly checksum: Checksum;
-  readonly createdBy: UserId;
+  readonly uploadedBy: UserId;
 
   private constructor(data: IDocumentVersion) {
     super(data);
@@ -38,9 +40,9 @@ export class DocumentVersion extends BaseEntity<DocumentVersionId> implements ID
     this.versionNumber = data.versionNumber;
     this.storageKey = data.storageKey;
     this.mimeType = data.mimeType;
-    this.fileSize = data.fileSize;
+    this.sizeBytes = data.sizeBytes;
     this.checksum = data.checksum;
-    this.createdBy = data.createdBy;
+    this.uploadedBy = data.uploadedBy;
   }
 
   /**
@@ -69,9 +71,9 @@ export class DocumentVersion extends BaseEntity<DocumentVersionId> implements ID
       versionNumber: raw.versionNumber,
       storageKey: StorageKey.fromTrusted(raw.storageKey),
       mimeType: MimeType.fromTrusted(raw.mimeType),
-      fileSize: Number(raw.fileSize),
+      sizeBytes: Number(raw.sizeBytes),
       checksum: Checksum.fromTrusted(raw.checksum),
-      createdBy: UserId.fromTrusted(raw.createdBy),
+      uploadedBy: UserId.fromTrusted(raw.uploadedBy),
       createdAt: DateTime.from(raw.createdAt),
       updatedAt: DateTime.from(raw.updatedAt),
     });
@@ -84,9 +86,9 @@ export class DocumentVersion extends BaseEntity<DocumentVersionId> implements ID
       versionNumber: this.versionNumber,
       storageKey: StorageKey.toString(this.storageKey),
       mimeType: MimeType.toString(this.mimeType),
-      fileSize: this.fileSize,
+      sizeBytes: this.sizeBytes,
       checksum: Checksum.toString(this.checksum),
-      createdBy: UserId.toString(this.createdBy),
+      uploadedBy: UserId.toString(this.uploadedBy),
     };
   }
 }

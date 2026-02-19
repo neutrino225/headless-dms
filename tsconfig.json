@@ -20,7 +20,7 @@
         "src/domain/*"
       ],
       "@application/*": [
-        "src/app/application/*"
+        "src/application/*"
       ],
       "@infra/*": [
         "src/infra/*"

@@ -5,6 +5,5 @@
 export * from './models/user.model';
 export * from './models/document.model';
 export * from './models/document-version.model';
-export * from './models/document-metadata.model';
 export * from './models/access-policy.model';
 export * from './models/audit-log.model';
