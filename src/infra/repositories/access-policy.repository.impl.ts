@@ -11,6 +11,7 @@ import { injectable } from "tsyringe";
 import { Result, Option } from "@carbonteq/fp";
 import { RepositoryResult } from "@domain/shared/base.repository";
 import { Paginated, PaginationOptions } from "@domain/shared/pagination";
+import { fetchPaginated } from "@infra/repositories/utils/pagination.util";
 
 type DrizzleDB = any;
 
@@ -73,67 +74,18 @@ export class AccessPolicyRepositoryImpl implements AccessPolicyRepository {
     documentId: string,
     options: PaginationOptions
   ): Promise<RepositoryResult<Paginated<AccessPolicy>>> {
-    try {
-      const { pageSize, offset, pageNum } = options;
-
-      const [countRow] = await this.db
-        .select({ total: count() })
-        .from(accessPolicies)
-        .where(eq(accessPolicies.documentId, documentId));
-
-      const totalItems = Number(countRow.total);
-      const totalPages = Math.ceil(totalItems / pageSize) || 1;
-
-      const rawRows = await this.db
-        .select()
-        .from(accessPolicies)
-        .where(eq(accessPolicies.documentId, documentId))
-        .limit(pageSize)
-        .offset(offset - pageSize);
-
-      const items = rawRows.map(this.toDomain);
-
-      return Result.Ok({
-        data: items,
-        pageNum,
-        pageSize,
-        totalPages,
-      });
-    } catch (error) {
-      return Result.Err(error as Error);
-    }
+    return this.fetchPaginatedInternal(options, eq(accessPolicies.documentId, documentId));
   }
 
   async fetchByUserId(userId: string, options: PaginationOptions): Promise<RepositoryResult<Paginated<AccessPolicy>>> {
-    try {
-      const { pageSize, offset, pageNum } = options;
+    return this.fetchPaginatedInternal(options, eq(accessPolicies.userId, userId));
+  }
 
-      const [countRow] = await this.db
-        .select({ total: count() })
-        .from(accessPolicies)
-        .where(eq(accessPolicies.userId, userId));
-
-      const totalItems = Number(countRow.total);
-      const totalPages = Math.ceil(totalItems / pageSize) || 1;
-
-      const rawRows = await this.db
-        .select()
-        .from(accessPolicies)
-        .where(eq(accessPolicies.userId, userId))
-        .limit(pageSize)
-        .offset(offset - pageSize);
-
-      const items = rawRows.map(this.toDomain);
-
-      return Result.Ok({
-        data: items,
-        pageNum,
-        pageSize,
-        totalPages,
-      });
-    } catch (error) {
-      return Result.Err(error as Error);
-    }
+  private async fetchPaginatedInternal(
+    options: PaginationOptions,
+    whereClause?: any
+  ): Promise<RepositoryResult<Paginated<AccessPolicy>>> {
+    return fetchPaginated(this.db, accessPolicies, options, this.toDomain, whereClause);
   }
 
   async fetchByDocumentAndUser(

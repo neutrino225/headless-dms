@@ -118,9 +118,11 @@ describe("AuditLogRepositoryImpl Integration Tests", () => {
     const user = makeUser();
     await userRepository.insert(user);
 
+    const nowIso = new Date().toISOString();
+
     // Insert logs
-    await repository.insert(makeAuditLog({ userId: user.id.toString() }));
-    await repository.insert(makeAuditLog({ userId: user.id.toString() }));
+    await repository.insert(makeAuditLog({ userId: user.id.toString(), createdAt: nowIso, updatedAt: nowIso }));
+    await repository.insert(makeAuditLog({ userId: user.id.toString(), createdAt: nowIso, updatedAt: nowIso }));
 
     const startDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // Yesterday
     const endDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // Tomorrow
@@ -179,8 +181,10 @@ describe("AuditLogRepositoryImpl Integration Tests", () => {
     const user = makeUser();
     await userRepository.insert(user);
 
-    await repository.insert(makeAuditLog({ userId: user.id.toString() }));
-    await repository.insert(makeAuditLog({ userId: user.id.toString() }));
+    const nowIso = new Date().toISOString();
+
+    await repository.insert(makeAuditLog({ userId: user.id.toString(), createdAt: nowIso, updatedAt: nowIso }));
+    await repository.insert(makeAuditLog({ userId: user.id.toString(), createdAt: nowIso, updatedAt: nowIso }));
 
     const startDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const endDate = new Date(Date.now() + 24 * 60 * 60 * 1000);

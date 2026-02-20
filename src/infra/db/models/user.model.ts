@@ -1,5 +1,5 @@
 import { pgTable, pgEnum, varchar, boolean, uniqueIndex } from "drizzle-orm/pg-core"
-import { SharedColumns } from "../utils/shared-cols"
+import { SharedColumns } from "./shared-cols"
 import { UserRole } from "src/domain/user/user.enums"
 
 export const userRoleEnum = pgEnum("user_role", Object.values(UserRole) as [string, ...string[]]);

@@ -299,6 +299,8 @@ export interface AuditLogOverrides {
   resourceId?: string;
   resourceType?: 'document' | 'user' | 'policy';
   metadata?: Record<string, unknown> | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export function makeAuditLog(overrides: AuditLogOverrides = {}): AuditLog {
@@ -310,7 +312,7 @@ export function makeAuditLog(overrides: AuditLogOverrides = {}): AuditLog {
     resourceId: overrides.resourceId ?? sample.resourceId,
     resourceType: overrides.resourceType ?? sample.resourceType,
     metadata: overrides.metadata !== undefined ? overrides.metadata : sample.metadata,
-    createdAt: sample.createdAt,
-    updatedAt: sample.updatedAt,
+    createdAt: overrides.createdAt ?? sample.createdAt,
+    updatedAt: overrides.updatedAt ?? sample.updatedAt,
   });
 }

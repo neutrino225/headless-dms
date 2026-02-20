@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { TestDbContainer } from "../../__tests__/utils/test-db";
 import { DocumentVersionRepositoryImpl } from "../document-version.repository.impl";
 import { DocumentRepositoryImpl } from "../document.repository.impl";
+import { UserRepositoryImpl } from "../user.repository.impl";
 import { makeDocumentVersion, makeDocument, makeUser, TEST_IDS } from "@domain/__tests__/factories";
 import { PaginationOptions } from "@domain/shared/pagination";
 import { sql } from "drizzle-orm";
@@ -11,12 +12,14 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   let testDb: TestDbContainer;
   let repository: DocumentVersionRepositoryImpl;
   let documentRepository: DocumentRepositoryImpl;
+  let userRepository: UserRepositoryImpl;
 
   beforeAll(async () => {
     testDb = new TestDbContainer();
     const result = await testDb.start();
     repository = new DocumentVersionRepositoryImpl(result.db);
     documentRepository = new DocumentRepositoryImpl(result.db);
+    userRepository = new UserRepositoryImpl(result.db);
   }, 120000);
 
   afterAll(async () => {
@@ -24,15 +27,23 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   beforeEach(async () => {
-    await testDb.db.execute(sql`TRUNCATE TABLE document_versions, documents CASCADE`);
+    await testDb.db.execute(sql`TRUNCATE TABLE document_versions, documents, users CASCADE`);
   });
 
-  it("should insert and fetch a document version by ID", async () => {
-    // First create a document to satisfy FK constraint
-    const doc = makeDocument();
+  async function setupDocumentWithOwnerAndUploader() {
+    const user = makeUser();
+    await userRepository.insert(user);
+
+    const doc = makeDocument({ ownerId: user.id });
     await documentRepository.insert(doc);
 
-    const version = makeDocumentVersion({ documentId: doc.id });
+    return { doc, user };
+  }
+
+  it("should insert and fetch a document version by ID", async () => {
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
+
+    const version = makeDocumentVersion({ documentId: doc.id, uploadedBy: user.id });
     const insertResult = await repository.insert(version);
     expect(insertResult.isOk()).toBe(true);
 
@@ -46,12 +57,11 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should fetch versions by document ID with pagination", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
     // Insert 15 versions for the document
     for (let i = 1; i <= 15; i++) {
-      await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: i }));
+      await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: i, uploadedBy: user.id }));
     }
 
     const options = PaginationOptions.create({ pageNum: 1, pageSize: 10 }).unwrap();
@@ -64,10 +74,9 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should fetch version by version number", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
-    const version = makeDocumentVersion({ documentId: doc.id, versionNumber: 5 });
+    const version = makeDocumentVersion({ documentId: doc.id, versionNumber: 5, uploadedBy: user.id });
     await repository.insert(version);
 
     const fetchResult = await repository.fetchByVersionNumber(doc.id.toString(), 5);
@@ -78,13 +87,12 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should fetch latest version by document ID", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
     // Insert versions with different version numbers
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 1 }));
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 3 }));
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 2 }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 1, uploadedBy: user.id }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 3, uploadedBy: user.id }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 2, uploadedBy: user.id }));
 
     const fetchResult = await repository.fetchLatestByDocumentId(doc.id.toString());
     expect(fetchResult.isOk()).toBe(true);
@@ -94,11 +102,10 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should fetch version by storage key", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
     const storageKey = "s3://bucket/path/to/file.pdf";
-    const version = makeDocumentVersion({ documentId: doc.id, storageKey });
+    const version = makeDocumentVersion({ documentId: doc.id, storageKey, uploadedBy: user.id });
     await repository.insert(version);
 
     const fetchResult = await repository.fetchByStorageKey(storageKey);
@@ -109,11 +116,10 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should check if storage key exists", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
     const storageKey = "s3://bucket/unique-key";
-    const version = makeDocumentVersion({ documentId: doc.id, storageKey });
+    const version = makeDocumentVersion({ documentId: doc.id, storageKey, uploadedBy: user.id });
     await repository.insert(version);
 
     const existsResult = await repository.existsByStorageKey(storageKey);
@@ -125,12 +131,11 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should fetch versions by checksum", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
     const checksum = "abc123def456";
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, checksum }));
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, checksum }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, checksum, uploadedBy: user.id }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, checksum, uploadedBy: user.id }));
 
     const options = PaginationOptions.create({ pageNum: 1, pageSize: 10 }).unwrap();
     const result = await repository.fetchByChecksum(checksum, options);
@@ -141,11 +146,10 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should check if checksum exists", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
     const checksum = "unique-checksum-123";
-    const version = makeDocumentVersion({ documentId: doc.id, checksum });
+    const version = makeDocumentVersion({ documentId: doc.id, checksum, uploadedBy: user.id });
     await repository.insert(version);
 
     const existsResult = await repository.existsByChecksum(checksum);
@@ -154,8 +158,7 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should get next version number for a document", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
     // No versions yet
     const nextResult1 = await repository.getNextVersionNumber(doc.id.toString());
@@ -163,7 +166,7 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
     expect(nextResult1.unwrap()).toBe(1);
 
     // Add a version
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 1 }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 1, uploadedBy: user.id }));
 
     const nextResult2 = await repository.getNextVersionNumber(doc.id.toString());
     expect(nextResult2.isOk()).toBe(true);
@@ -171,12 +174,11 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should count versions by document ID", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 1 }));
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 2 }));
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 3 }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 1, uploadedBy: user.id }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 2, uploadedBy: user.id }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 3, uploadedBy: user.id }));
 
     const countResult = await repository.countByDocumentId(doc.id.toString());
     expect(countResult.isOk()).toBe(true);
@@ -184,10 +186,9 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should delete a version", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
-    const version = makeDocumentVersion({ documentId: doc.id });
+    const version = makeDocumentVersion({ documentId: doc.id, uploadedBy: user.id });
     await repository.insert(version);
 
     const deleteResult = await repository.delete(version.id.toString());
@@ -199,11 +200,10 @@ describe("DocumentVersionRepositoryImpl Integration Tests", () => {
   });
 
   it("should delete all versions by document ID", async () => {
-    const doc = makeDocument();
-    await documentRepository.insert(doc);
+    const { doc, user } = await setupDocumentWithOwnerAndUploader();
 
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 1 }));
-    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 2 }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 1, uploadedBy: user.id }));
+    await repository.insert(makeDocumentVersion({ documentId: doc.id, versionNumber: 2, uploadedBy: user.id }));
 
     const deleteResult = await repository.deleteByDocumentId(doc.id.toString());
     expect(deleteResult.isOk()).toBe(true);

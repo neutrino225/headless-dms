@@ -1,7 +1,7 @@
 import { Option } from '@carbonteq/fp';
 
 import { UUID } from "src/domain/utils/refined-types"
-import { DateTime } from "src/domain/value-objects/date-time.vo"
+import { DateTime } from "@domain/utils/value-objects"
 
 /**
  * Base interface for all domain entities.

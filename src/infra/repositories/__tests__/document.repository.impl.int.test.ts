@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { TestDbContainer } from "../../__tests__/utils/test-db";
 import { DocumentRepositoryImpl } from "../document.repository.impl";
+import { UserRepositoryImpl } from "../user.repository.impl";
 import { makeDocument, makeUser, TEST_IDS } from "@domain/__tests__/factories";
 import { PaginationOptions } from "@domain/shared/pagination";
 import { DocumentStatus } from "@domain/document/document.enums";
@@ -10,11 +11,13 @@ import { sql } from "drizzle-orm";
 describe("DocumentRepositoryImpl Integration Tests", () => {
   let testDb: TestDbContainer;
   let repository: DocumentRepositoryImpl;
+  let userRepository: UserRepositoryImpl;
 
   beforeAll(async () => {
     testDb = new TestDbContainer();
     const result = await testDb.start();
     repository = new DocumentRepositoryImpl(result.db);
+    userRepository = new UserRepositoryImpl(result.db);
   }, 120000);
 
   afterAll(async () => {
@@ -22,11 +25,18 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
   });
 
   beforeEach(async () => {
-    await testDb.db.execute(sql`TRUNCATE TABLE documents CASCADE`);
+    await testDb.db.execute(sql`TRUNCATE TABLE documents, users CASCADE`);
   });
 
+  async function setupUser(userId?: typeof TEST_IDS.user1) {
+    const user = userId ? makeUser({ id: userId }) : makeUser();
+    await userRepository.insert(user);
+    return user;
+  }
+
   it("should insert and fetch a document by ID", async () => {
-    const doc = makeDocument();
+    const user = await setupUser();
+    const doc = makeDocument({ ownerId: user.id });
     const insertResult = await repository.insert(doc);
     expect(insertResult.isOk()).toBe(true);
 
@@ -40,7 +50,8 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
   });
 
   it("should update a document and rehydrate correctly", async () => {
-    const doc = makeDocument({ name: "Original Name" });
+    const user = await setupUser();
+    const doc = makeDocument({ name: "Original Name", ownerId: user.id });
     await repository.insert(doc);
 
     const updatedDoc = makeDocument({
@@ -61,6 +72,7 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
 
   it("should fetch documents by owner ID with pagination", async () => {
     const ownerId = TEST_IDS.user1;
+    await setupUser(ownerId);
     
     // Insert 15 documents for the owner
     for (let i = 0; i < 15; i++) {
@@ -77,13 +89,14 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
   });
 
   it("should fetch documents by status", async () => {
+    const user = await setupUser();
     // Insert 10 active documents
     for (let i = 0; i < 10; i++) {
-      await repository.insert(makeDocument({ status: DocumentStatus.Active }));
+      await repository.insert(makeDocument({ status: DocumentStatus.Active, ownerId: user.id }));
     }
     // Insert 5 archived documents
     for (let i = 0; i < 5; i++) {
-      await repository.insert(makeDocument({ status: DocumentStatus.Archived }));
+      await repository.insert(makeDocument({ status: DocumentStatus.Archived, ownerId: user.id }));
     }
 
     const options = PaginationOptions.create({ pageNum: 1, pageSize: 10 }).unwrap();
@@ -97,7 +110,8 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
 
   it("should check if slug exists", async () => {
     const slug = "unique-slug-123";
-    const doc = makeDocument({ slug });
+    const user = await setupUser();
+    const doc = makeDocument({ slug, ownerId: user.id });
     await repository.insert(doc);
 
     const existsResult = await repository.existsBySlug(slug);
@@ -109,8 +123,9 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
   });
 
   it("should search documents by name", async () => {
-    const doc1 = makeDocument({ name: "financial-report-2024" });
-    const doc2 = makeDocument({ name: "project-proposal" });
+    const user = await setupUser();
+    const doc1 = makeDocument({ name: "financial-report-2024", ownerId: user.id });
+    const doc2 = makeDocument({ name: "project-proposal", ownerId: user.id });
     await repository.insert(doc1);
     await repository.insert(doc2);
 
@@ -124,7 +139,8 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
   });
 
   it("should archive and restore a document", async () => {
-    const doc = makeDocument({ status: DocumentStatus.Active });
+    const user = await setupUser();
+    const doc = makeDocument({ status: DocumentStatus.Active, ownerId: user.id });
     await repository.insert(doc);
 
     const archiveResult = await repository.archive(doc.id.toString());
@@ -137,7 +153,8 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
   });
 
   it("should soft delete a document", async () => {
-    const doc = makeDocument();
+    const user = await setupUser();
+    const doc = makeDocument({ ownerId: user.id });
     await repository.insert(doc);
 
     const deleteResult = await repository.softDelete(doc.id.toString());
@@ -146,7 +163,8 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
   });
 
   it("should fetch document with versions", async () => {
-    const doc = makeDocument();
+    const user = await setupUser();
+    const doc = makeDocument({ ownerId: user.id });
     await repository.insert(doc);
 
     const result = await repository.fetchWithVersions(doc.id.toString());
@@ -159,7 +177,8 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
   });
 
   it("should update latest version ID", async () => {
-    const doc = makeDocument({ latestVersionId: null });
+    const user = await setupUser();
+    const doc = makeDocument({ latestVersionId: null, ownerId: user.id });
     await repository.insert(doc);
 
     const versionId = TEST_IDS.docVersion1;
@@ -173,7 +192,8 @@ describe("DocumentRepositoryImpl Integration Tests", () => {
   });
 
   it("should delete a document", async () => {
-    const doc = makeDocument();
+    const user = await setupUser();
+    const doc = makeDocument({ ownerId: user.id });
     await repository.insert(doc);
 
     const deleteResult = await repository.delete(doc.id.toString());

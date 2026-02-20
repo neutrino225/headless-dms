@@ -1,6 +1,6 @@
-import { Result } from '@carbonteq/fp';
+import { Result, Option } from '@carbonteq/fp';
 import { DocumentId, DocumentVersionId, UserId, MimeType } from "src/domain/utils/refined-types";
-import { DateTime } from 'src/domain/value-objects/date-time.vo';
+import { DateTime } from '@domain/utils/value-objects';
 import { BaseEntity, Serialized, IEntity, CreateEntity } from 'src/domain/shared/base.entity';
 import { DocumentStatus } from './document.enums';
 
@@ -11,7 +11,7 @@ import { DocumentStatus } from './document.enums';
  */
 export interface IDocument extends IEntity<DocumentId> {
   readonly name: string;
-  readonly description: string | null;
+  readonly description: Option<string>;
   readonly ownerId: UserId;
   /** URL-friendly identifier, unique per workspace. */
   readonly slug: string;
@@ -20,12 +20,12 @@ export interface IDocument extends IEntity<DocumentId> {
   /** Lifecycle status of the document. Replaces the old `isArchived` boolean. */
   readonly status: DocumentStatus;
   /** FK to the current latest DocumentVersion. Null until the first version is uploaded. */
-  readonly latestVersionId: DocumentVersionId | null;
+  readonly latestVersionId:  Option<DocumentVersionId>;
   /**
    * Flexible key-value metadata for advanced search and tagging.
    * e.g. `{ "department": "finance", "tags": ["Q1", "report"] }`
    */
-  readonly metadata: Record<string, unknown> | null;
+  readonly metadata: Option<Record<string, unknown>>;
 }
 
 /**
@@ -35,13 +35,13 @@ export type SerializedDocument = Serialized<IDocument>;
 
 export class Document extends BaseEntity<DocumentId> implements IDocument {
   readonly name: string;
-  readonly description: string | null;
+  readonly description: Option<string>;
   readonly ownerId: UserId;
   readonly slug: string;
   readonly mimeType: MimeType;
   readonly status: DocumentStatus;
-  readonly latestVersionId: DocumentVersionId | null;
-  readonly metadata: Record<string, unknown> | null;
+  readonly latestVersionId: Option<DocumentVersionId> ;
+  readonly metadata: Option<Record<string, unknown>>;
 
   private constructor(data: IDocument) {
     super(data);
@@ -77,15 +77,13 @@ export class Document extends BaseEntity<DocumentId> implements IDocument {
     return new Document({
       id: DocumentId.fromTrusted(raw.id),
       name: raw.name,
-      description: raw.description ?? null,
+      description: Option.fromNullable(raw.description),
       ownerId: UserId.fromTrusted(raw.ownerId),
       slug: raw.slug,
       mimeType: MimeType.fromTrusted(raw.mimeType),
       status: raw.status as DocumentStatus,
-      latestVersionId: raw.latestVersionId
-        ? DocumentVersionId.fromTrusted(raw.latestVersionId)
-        : null,
-      metadata: raw.metadata ?? null,
+      latestVersionId: Option.fromNullable(raw.latestVersionId).map(DocumentVersionId.fromTrusted),
+      metadata: Option.fromNullable(raw.metadata),
       createdAt: DateTime.from(raw.createdAt),
       updatedAt: DateTime.from(raw.updatedAt),
     });
@@ -95,13 +93,13 @@ export class Document extends BaseEntity<DocumentId> implements IDocument {
     return {
       ...this._serialize(),
       name: this.name,
-      description: this.description,
+      description: this.description.safeUnwrap(),
       ownerId: UserId.toString(this.ownerId),
       slug: this.slug,
       mimeType: MimeType.toString(this.mimeType),
       status: this.status,
-      latestVersionId: this.latestVersionId ?? null,
-      metadata: this.metadata,
+      latestVersionId: this.latestVersionId.safeUnwrap(),
+      metadata: this.metadata.safeUnwrap(),
     };
   }
 }

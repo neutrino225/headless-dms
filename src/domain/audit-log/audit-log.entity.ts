@@ -1,6 +1,6 @@
 import { Result } from '@carbonteq/fp';
 import { UUID } from "src/domain/utils/refined-types";
-import { DateTime } from 'src/domain/value-objects/date-time.vo';
+import { DateTime } from '@domain/utils/value-objects';
 import { BaseEntity, Serialized, IEntity, CreateEntity } from 'src/domain/shared/base.entity';
 import { AuditAction } from './audit-log.enums';
 
@@ -12,10 +12,6 @@ export interface IAuditLog extends IEntity {
   readonly action: AuditAction | string;
   readonly resourceId: UUID;
   readonly resourceType: AuditResourceType;
-  /**
-   * Optional structured payload for the action.
-   * e.g. `{ "previousStatus": "active", "newStatus": "archived" }`
-   */
   readonly metadata: Record<string, unknown> | null;
   readonly createdAt: DateTime;
 }

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Option } from '@carbonteq/fp';
 import { Document } from 'src/domain/document/document.entity';
 import { DocumentStatus } from 'src/domain/document/document.enums';
 import { makeDocument, makeDocumentWithStatus, TEST_IDS } from './factories';
@@ -9,24 +10,24 @@ describe('Document entity', () => {
     it('creates a document with a generated UUID id', () => {
       const result = Document.create({
         name: 'My Report',
-        description: 'Q1 financial report',
+        description: Option.Some('Q1 financial report'),
         ownerId: TEST_IDS.user1,
         slug: 'my-report',
         mimeType: 'application/pdf' as any,
         status: DocumentStatus.Active,
-        latestVersionId: null,
-        metadata: null,
+        latestVersionId: Option.None,
+        metadata: Option.None,
       });
 
       const doc = TestPatterns.Result.expectOk(result);
       expect(doc.id).toMatch(/^[0-9a-f-]{36}$/);
       expect(doc.name).toBe('My Report');
-      expect(doc.description).toBe('Q1 financial report');
+      expect(doc.description.safeUnwrap()).toBe('Q1 financial report');
       expect(doc.ownerId).toBe(TEST_IDS.user1);
       expect(doc.slug).toBe('my-report');
       expect(doc.status).toBe(DocumentStatus.Active);
-      expect(doc.latestVersionId).toBeNull();
-      expect(doc.metadata).toBeNull();
+      expect(doc.latestVersionId.isNone()).toBe(true);
+      expect(doc.metadata.isNone()).toBe(true);
     });
 
     it('sets createdAt and updatedAt to the current time', () => {
@@ -34,13 +35,13 @@ describe('Document entity', () => {
       const doc = TestPatterns.Result.expectOk(
         Document.create({
           name: 'Doc',
-          description: null,
+          description: Option.None,
           ownerId: TEST_IDS.user1,
           slug: 'doc',
           mimeType: 'application/pdf' as any,
           status: DocumentStatus.Active,
-          latestVersionId: null,
-          metadata: null,
+          latestVersionId: Option.None,
+          metadata: Option.None,
         }),
       );
       const after = new Date();
@@ -51,9 +52,9 @@ describe('Document entity', () => {
 
     it('generates a unique id on each call', () => {
       const makeDoc = (slug: string) => Document.create({
-        name: 'A', description: null, ownerId: TEST_IDS.user1,
+        name: 'A', description: Option.None, ownerId: TEST_IDS.user1,
         slug, mimeType: 'application/pdf' as any,
-        status: DocumentStatus.Active, latestVersionId: null, metadata: null,
+        status: DocumentStatus.Active, latestVersionId: Option.None, metadata: Option.None,
       });
       const doc1 = TestPatterns.Result.expectOk(makeDoc('slug-a'));
       const doc2 = TestPatterns.Result.expectOk(makeDoc('slug-b'));

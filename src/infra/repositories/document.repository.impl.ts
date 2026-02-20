@@ -13,6 +13,7 @@ import { RepositoryResult } from "@domain/shared/base.repository";
 import { Paginated, PaginationOptions } from "@domain/shared/pagination";
 import { DocumentStatus, AccessLevel } from "@domain/document/document.enums";
 import { accessPolicies } from "@infra/db/schema";
+import { fetchPaginated } from "@infra/repositories/utils/pagination.util";
 
 type DrizzleDB = any;
 
@@ -293,35 +294,7 @@ export class DocumentRepositoryImpl implements DocumentRepository {
     options: PaginationOptions,
     whereClause?: any
   ): Promise<RepositoryResult<Paginated<Document>>> {
-    try {
-      const { pageSize, offset, pageNum } = options;
-
-      const [countRow] = await this.db
-        .select({ total: count() })
-        .from(documents)
-        .where(whereClause);
-
-      const totalItems = Number(countRow.total);
-      const totalPages = Math.ceil(totalItems / pageSize) || 1;
-
-      const rawRows = await this.db
-        .select()
-        .from(documents)
-        .where(whereClause)
-        .limit(pageSize)
-        .offset(offset - pageSize);
-
-      const items = rawRows.map(this.toDomain);
-
-      return Result.Ok({
-        data: items,
-        pageNum,
-        pageSize,
-        totalPages,
-      });
-    } catch (error) {
-      return Result.Err(error as Error);
-    }
+    return fetchPaginated(this.db, documents, options, this.toDomain, whereClause);
   }
 
   async existsBy(prop: string, val: any): Promise<RepositoryResult<boolean>> {

@@ -1,6 +1,6 @@
 import { pgTable, text, integer, bigint, check, unique, index } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
-import { SharedColumns, UuidCol } from "../utils/shared-cols";
+import { SharedColumns, UuidCol } from "./shared-cols";
 import { documents } from "./document.model";
 import { users } from "./user.model";
 

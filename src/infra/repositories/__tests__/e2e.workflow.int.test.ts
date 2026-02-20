@@ -209,6 +209,6 @@ describe("E2E Document Workflow", () => {
     expect(searchResult.isOk()).toBe(true);
     const results = searchResult.unwrap();
     expect(results.data.length).toBe(2);
-    expect(results.data.every((d) => (d.metadata as Record<string, unknown> | null)?.department === "finance")).toBe(true);
+    expect(results.data.every((d) => (d.metadata.safeUnwrap() as Record<string, unknown> | null)?.department === "finance")).toBe(true);
   });
 });

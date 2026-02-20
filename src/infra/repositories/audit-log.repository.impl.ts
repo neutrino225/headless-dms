@@ -7,6 +7,7 @@ import { injectable } from "tsyringe";
 import { Result, Option } from "@carbonteq/fp";
 import { RepositoryResult } from "@domain/shared/base.repository";
 import { Paginated, PaginationOptions } from "@domain/shared/pagination";
+import { fetchPaginated } from "@infra/repositories/utils/pagination.util";
 
 type DrizzleDB = any;
 
@@ -201,46 +202,13 @@ export class AuditLogRepositoryImpl implements AuditLogRepository {
     endDate: Date,
     options: PaginationOptions
   ): Promise<RepositoryResult<Paginated<AuditLog>>> {
-    try {
-      const { pageSize, offset, pageNum } = options;
-
-      const [countRow] = await this.db
-        .select({ total: count() })
-        .from(auditLogs)
-        .where(
-          and(
-            gte(auditLogs.createdAt, startDate),
-            lte(auditLogs.createdAt, endDate)
-          )
-        );
-
-      const totalItems = Number(countRow.total);
-      const totalPages = Math.ceil(totalItems / pageSize) || 1;
-
-      const rawRows = await this.db
-        .select()
-        .from(auditLogs)
-        .where(
-          and(
-            gte(auditLogs.createdAt, startDate),
-            lte(auditLogs.createdAt, endDate)
-          )
-        )
-        .orderBy(sql`${auditLogs.createdAt} DESC`)
-        .limit(pageSize)
-        .offset(offset - pageSize);
-
-      const items = rawRows.map(this.toDomain);
-
-      return Result.Ok({
-        data: items,
-        pageNum,
-        pageSize,
-        totalPages,
-      });
-    } catch (error) {
-      return Result.Err(error as Error);
-    }
+    return this.fetchPaginatedInternal(
+      options,
+      and(
+        gte(auditLogs.createdAt, startDate),
+        lte(auditLogs.createdAt, endDate)
+      )
+    );
   }
 
   async fetchByUserAndResource(
@@ -248,85 +216,37 @@ export class AuditLogRepositoryImpl implements AuditLogRepository {
     resourceId: string,
     options: PaginationOptions
   ): Promise<RepositoryResult<Paginated<AuditLog>>> {
-    try {
-      const { pageSize, offset, pageNum } = options;
-
-      const [countRow] = await this.db
-        .select({ total: count() })
-        .from(auditLogs)
-        .where(
-          and(
-            eq(auditLogs.userId, userId),
-            eq(auditLogs.resourceId, resourceId)
-          )
-        );
-
-      const totalItems = Number(countRow.total);
-      const totalPages = Math.ceil(totalItems / pageSize) || 1;
-
-      const rawRows = await this.db
-        .select()
-        .from(auditLogs)
-        .where(
-          and(
-            eq(auditLogs.userId, userId),
-            eq(auditLogs.resourceId, resourceId)
-          )
-        )
-        .orderBy(sql`${auditLogs.createdAt} DESC`)
-        .limit(pageSize)
-        .offset(offset - pageSize);
-
-      const items = rawRows.map(this.toDomain);
-
-      return Result.Ok({
-        data: items,
-        pageNum,
-        pageSize,
-        totalPages,
-      });
-    } catch (error) {
-      return Result.Err(error as Error);
-    }
+    return this.fetchPaginatedInternal(
+      options,
+      and(
+        eq(auditLogs.userId, userId),
+        eq(auditLogs.resourceId, resourceId)
+      )
+    );
   }
 
   async search(query: string, options: PaginationOptions): Promise<RepositoryResult<Paginated<AuditLog>>> {
-    try {
-      const { pageSize, offset, pageNum } = options;
+    // Search in action or metadata JSON
+    const searchExpr = or(
+      sql`${auditLogs.action}::text ILIKE ${`%${query}%`}`,
+      sql`${auditLogs.metadata}::text ILIKE ${`%${query}%`}`
+    );
 
-      // Search in action or metadata JSON
-      const searchExpr = or(
-        ilike(auditLogs.action, `%${query}%`),
-        sql`${auditLogs.metadata}::text ILIKE ${`%${query}%`}`
-      );
+    return this.fetchPaginatedInternal(options, searchExpr);
+  }
 
-      const [countRow] = await this.db
-        .select({ total: count() })
-        .from(auditLogs)
-        .where(searchExpr);
-
-      const totalItems = Number(countRow.total);
-      const totalPages = Math.ceil(totalItems / pageSize) || 1;
-
-      const rawRows = await this.db
-        .select()
-        .from(auditLogs)
-        .where(searchExpr)
-        .orderBy(sql`${auditLogs.createdAt} DESC`)
-        .limit(pageSize)
-        .offset(offset - pageSize);
-
-      const items = rawRows.map(this.toDomain);
-
-      return Result.Ok({
-        data: items,
-        pageNum,
-        pageSize,
-        totalPages,
-      });
-    } catch (error) {
-      return Result.Err(error as Error);
-    }
+  private async fetchPaginatedInternal(
+    options: PaginationOptions,
+    whereClause?: any
+  ): Promise<RepositoryResult<Paginated<AuditLog>>> {
+    return fetchPaginated(
+      this.db,
+      auditLogs,
+      options,
+      this.toDomain,
+      whereClause,
+      sql`${auditLogs.createdAt} DESC`
+    );
   }
 
   async countByUserId(userId: string): Promise<RepositoryResult<number>> {

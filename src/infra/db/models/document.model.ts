@@ -1,5 +1,5 @@
 import { pgTable, pgEnum, text, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core"
-import { SharedColumns, UuidCol } from "../utils/shared-cols";
+import { SharedColumns, UuidCol } from "./shared-cols";
 import { users } from "./user.model";
 import { DocumentStatus } from "src/domain/document/document.enums";
 

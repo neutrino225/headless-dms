@@ -33,8 +33,9 @@ describe("AccessPolicyRepositoryImpl Integration Tests", () => {
 
   async function setupDocumentAndUser() {
     const user = makeUser();
-    const doc = makeDocument();
     await userRepository.insert(user);
+
+    const doc = makeDocument({ ownerId: user.id });
     await documentRepository.insert(doc);
     return { user, doc };
   }

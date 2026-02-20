@@ -1,5 +1,5 @@
 import { pgTable, pgEnum, jsonb, index } from "drizzle-orm/pg-core"
-import { SharedColumns, UuidCol } from "../utils/shared-cols";
+import { SharedColumns, UuidCol } from "./shared-cols";
 import { users } from "./user.model";
 import { AuditAction } from "src/domain/audit-log/audit-log.enums";
 

@@ -10,6 +10,7 @@ import { injectable } from "tsyringe";
 import { Result, Option } from "@carbonteq/fp";
 import { RepositoryResult } from "@domain/shared/base.repository";
 import { Paginated, PaginationOptions } from "@domain/shared/pagination";
+import { fetchPaginated } from "@infra/repositories/utils/pagination.util";
 
 type DrizzleDB = any;
 
@@ -54,36 +55,26 @@ export class DocumentVersionRepositoryImpl implements DocumentVersionRepository 
     documentId: string,
     options: PaginationOptions
   ): Promise<RepositoryResult<Paginated<DocumentVersion>>> {
-    try {
-      const { pageSize, offset, pageNum } = options;
+    return this.fetchPaginatedInternal(
+      options,
+      eq(documentVersions.documentId, documentId),
+      desc(documentVersions.versionNumber)
+    );
+  }
 
-      const [countRow] = await this.db
-        .select({ total: count() })
-        .from(documentVersions)
-        .where(eq(documentVersions.documentId, documentId));
-
-      const totalItems = Number(countRow.total);
-      const totalPages = Math.ceil(totalItems / pageSize) || 1;
-
-      const rawRows = await this.db
-        .select()
-        .from(documentVersions)
-        .where(eq(documentVersions.documentId, documentId))
-        .orderBy(desc(documentVersions.versionNumber))
-        .limit(pageSize)
-        .offset(offset - pageSize);
-
-      const items = rawRows.map(this.toDomain);
-
-      return Result.Ok({
-        data: items,
-        pageNum,
-        pageSize,
-        totalPages,
-      });
-    } catch (error) {
-      return Result.Err(error as Error);
-    }
+  private async fetchPaginatedInternal(
+    options: PaginationOptions,
+    whereClause?: any,
+    orderBy?: any
+  ): Promise<RepositoryResult<Paginated<DocumentVersion>>> {
+    return fetchPaginated(
+      this.db,
+      documentVersions,
+      options,
+      this.toDomain,
+      whereClause,
+      orderBy
+    );
   }
 
   async fetchByVersionNumber(

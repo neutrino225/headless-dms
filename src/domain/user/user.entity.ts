@@ -1,6 +1,6 @@
 import { Result } from '@carbonteq/fp';
 import { UserId, Email } from "src/domain/utils/refined-types";
-import { DateTime } from 'src/domain/value-objects/date-time.vo';
+import { DateTime } from '@domain/utils/value-objects';
 import { BaseEntity, Serialized, IEntity, CreateEntity } from 'src/domain/shared/base.entity';
 import { UserRole } from './user.enums';
 

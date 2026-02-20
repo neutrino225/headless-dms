@@ -1,5 +1,5 @@
 import { pgTable, pgEnum, unique, index } from "drizzle-orm/pg-core"
-import { SharedColumns, UuidCol } from "../utils/shared-cols";
+import { SharedColumns, UuidCol } from "./shared-cols";
 import { users } from "./user.model";
 import { documents } from "./document.model";
 import { AccessLevel } from "src/domain/document/document.enums";

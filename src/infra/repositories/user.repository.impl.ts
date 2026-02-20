@@ -8,6 +8,7 @@ import { Result, Option } from "@carbonteq/fp";
 import { RepositoryResult } from "@domain/shared/base.repository";
 import { Paginated, PaginationOptions } from "@domain/shared/pagination";
 import { UserRole } from "@domain/user/user.enums";
+import { fetchPaginated } from "@infra/repositories/utils/pagination.util";
 
 type DrizzleDB = any;
 
@@ -113,47 +114,7 @@ export class UserRepositoryImpl implements UserRepository {
         options: PaginationOptions,
         whereClause?: any
     ): Promise<RepositoryResult<Paginated<User>>> {
-        try {
-            const { pageSize, offset, pageNum } = options;
-
-            // Get total count
-            const [countRow] = await this.db
-                .select({ total: count() })
-                .from(users)
-                .where(whereClause);
-            
-            const totalItems = Number(countRow.total);
-            const totalPages = Math.ceil(totalItems / pageSize) || 1;
-
-            // Get data
-            const rawRows = await this.db
-                .select()
-                .from(users)
-                .where(whereClause)
-                .limit(pageSize)
-                .offset(offset - pageSize); // PaginationOptions.offset is pageNum * pageSize, we need (pageNum-1) * pageSize for 1-based indexing if that's how it's used
-            
-            // Wait, let's re-verify PaginationOptions.offset
-            /*
-            private constructor(readonly pageNum: number, readonly pageSize: number) {
-                this.offset = pageSize * pageNum;
-            }
-            */
-            // If pageNum = 1, pageSize = 10, offset = 10.
-            // Drizzle offset 0 is page 1.
-            // So offset - pageSize is (10 - 10) = 0. Correct.
-
-            const items = rawRows.map(this.toDomain);
-
-            return Result.Ok({
-                data: items,
-                pageNum,
-                pageSize,
-                totalPages
-            });
-        } catch (error) {
-            return Result.Err(error as Error);
-        }
+        return fetchPaginated(this.db, users, options, this.toDomain, whereClause);
     }
 
     async register(user: User): Promise<RepositoryResult<Option<User>, EmailAlreadyTakenError | UserDomainError>> {

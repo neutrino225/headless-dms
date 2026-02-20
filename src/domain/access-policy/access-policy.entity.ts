@@ -1,6 +1,6 @@
 import { Result } from '@carbonteq/fp';
 import { AccessPolicyId, DocumentId, UserId } from "src/domain/utils/refined-types";
-import { DateTime } from 'src/domain/value-objects/date-time.vo';
+import { DateTime } from '@domain/utils/value-objects';
 import { BaseEntity, Serialized, IEntity, CreateEntity } from 'src/domain/shared/base.entity';
 import { AccessLevel } from 'src/domain/document/document.enums';
 
