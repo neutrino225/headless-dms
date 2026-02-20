@@ -79,6 +79,17 @@ export class DocumentVersionRepositoryImpl implements DocumentVersionRepository 
     }
   }
 
+  async fetchByStorageKey(storageKey: string): Promise<RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>> {
+    try {
+      const raw = await this.db.query.documentVersions.findFirst({
+        where: eq(documentVersions.storageKey, storageKey),
+      });
+      return Result.Ok(Option.fromNullable(raw).map(this.toDomain));
+    } catch (error) {
+      return Result.Err(new DocumentVersionNotFoundError(storageKey));
+    }
+  }
+
   async delete(id: string): Promise<RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>> {
     try {
       const existing = await this.fetchById(id);

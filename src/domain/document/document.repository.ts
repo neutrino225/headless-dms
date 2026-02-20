@@ -25,4 +25,9 @@ export interface DocumentRepository extends BaseRepository<Document> {
   update(entity: Document): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>>;
   
   delete(id: string): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>>;
+
+  findPaginated(
+    options: PaginationOptions,
+    filters?: { status?: DocumentStatus; ownerId?: string }
+  ): Promise<RepositoryResult<Paginated<Document>>>;
 }

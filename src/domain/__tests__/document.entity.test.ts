@@ -75,7 +75,7 @@ describe('Document entity', () => {
 
       expect(doc.id).toBe(TEST_IDS.doc1);
       expect(doc.name).toBe('Quarterly Report');
-      expect(doc.description).toBe('Q1 results');
+      expect(doc.description.safeUnwrap()).toBe('Q1 results');
       expect(doc.ownerId).toBe(TEST_IDS.user1);
       expect(doc.slug).toBe('quarterly-report');
       expect(doc.status).toBe(DocumentStatus.Active);
@@ -100,12 +100,12 @@ describe('Document entity', () => {
 
       expect(restored.id).toBe(original.id);
       expect(restored.name).toBe(original.name);
-      expect(restored.description).toBe(original.description);
+      expect(restored.description.safeUnwrap()).toBe(original.description.safeUnwrap());
       expect(restored.ownerId).toBe(original.ownerId);
       expect(restored.slug).toBe(original.slug);
       expect(restored.status).toBe(original.status);
-      expect(restored.latestVersionId).toBe(original.latestVersionId);
-      expect(restored.metadata).toEqual(original.metadata);
+      expect(restored.latestVersionId.safeUnwrap()).toBe(original.latestVersionId.safeUnwrap());
+      expect(restored.metadata.safeUnwrap()).toEqual(original.metadata.safeUnwrap());
       expect(restored.createdAt.toISOString()).toBe(original.createdAt.toISOString());
     });
 

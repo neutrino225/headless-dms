@@ -18,6 +18,9 @@ export interface DocumentVersionRepository {
   fetchByDocumentId(documentId: string, options: PaginationOptions): Promise<RepositoryResult<Paginated<DocumentVersion>>>;
   
   fetchLatestByDocumentId(documentId: string): Promise<RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>>;
+
+  /** Returns the version whose storageKey matches, if any. Used for idempotency in upload confirmation. */
+  fetchByStorageKey(storageKey: string): Promise<RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>>;
   
   insert(entity: DocumentVersion): Promise<RepositoryResult<Option<DocumentVersion>, DocumentValidationError>>;
   

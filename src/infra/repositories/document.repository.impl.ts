@@ -1,14 +1,14 @@
 import { Document } from "@domain/document/document.entity";
 import { DocumentRepository } from "@domain/document/document.repository";
-import {
-  DocumentNotFoundError,
-  DocumentValidationError,
-} from "@domain/document/document.errors";
-import { eq } from "drizzle-orm";
+import { DocumentNotFoundError, DocumentValidationError } from "@domain/document/document.errors";
+import { and, eq } from "drizzle-orm";
 import { documents } from "@infra/db/schema";
 import { injectable } from "tsyringe";
 import { Result, Option } from "@carbonteq/fp";
 import { RepositoryResult } from "@domain/shared/base.repository";
+import { Paginated, PaginationOptions } from "@domain/shared/pagination";
+import { fetchPaginated } from "@infra/repositories/utils/pagination.util";
+import { DocumentStatus } from "@domain/document/document.enums";
 
 type DrizzleDB = any;
 
@@ -97,5 +97,23 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 
   async existsBy(prop: string, val: any): Promise<RepositoryResult<boolean>> {
     throw new Error("Method not implemented.");
+  }
+
+  async findPaginated(
+    options: PaginationOptions,
+    filters?: { status?: DocumentStatus; ownerId?: string },
+  ): Promise<RepositoryResult<Paginated<Document>>> {
+    const whereClauses = [];
+    if (filters?.status) whereClauses.push(eq(documents.status, filters.status));
+    if (filters?.ownerId)
+      whereClauses.push(eq(documents.ownerId, filters.ownerId));
+
+    return fetchPaginated(
+      this.db,
+      documents as any,
+      options,
+      this.toDomain,
+      whereClauses.length > 0 ? and(...whereClauses) : undefined,
+    );
   }
 }
