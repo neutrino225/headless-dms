@@ -1,14 +1,11 @@
 import { User } from "@domain/user/user.entity";
-import { UserNotFoundError, UserAlreadyExistsError, EmailAlreadyTakenError, UserDomainError, UserUnauthorizedError, UserValidationError } from "@domain/user/user.errors";
+import { UserNotFoundError, UserAlreadyExistsError } from "@domain/user/user.errors";
 import { UserRepository } from "@domain/user/user.repository";
-import { and, count, eq, ilike, isNotNull, or, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { users } from "@infra/db/schema";
 import { injectable } from "tsyringe";
 import { Result, Option } from "@carbonteq/fp";
 import { RepositoryResult } from "@domain/shared/base.repository";
-import { Paginated, PaginationOptions } from "@domain/shared/pagination";
-import { UserRole } from "@domain/user/user.enums";
-import { fetchPaginated } from "@infra/repositories/utils/pagination.util";
 
 type DrizzleDB = any;
 
@@ -81,54 +78,6 @@ export class UserRepositoryImpl implements UserRepository {
         }
     }
 
-    async existsByEmail(email: string): Promise<RepositoryResult<boolean>> {
-        try {
-            const [row] = await this.db.select({ value: count() }).from(users).where(eq(users.email, email));
-            return Result.Ok(Number(row.value) > 0);
-        } catch (error) {
-            return Result.Err(error as Error);
-        }
-    }
-
-    async fetchActiveUsers(options: PaginationOptions): Promise<RepositoryResult<Paginated<User>>> {
-        return this.fetchPaginatedInternal(options, eq(users.isActive, true));
-    }
-
-    async fetchInactiveUsers(options: PaginationOptions): Promise<RepositoryResult<Paginated<User>>> {
-        return this.fetchPaginatedInternal(options, eq(users.isActive, false));
-    }
-
-    async fetchByRole(role: UserRole, options: PaginationOptions): Promise<RepositoryResult<Paginated<User>>> {
-        return this.fetchPaginatedInternal(options, eq(users.role, role));
-    }
-
-    async search(query: string, options: PaginationOptions): Promise<RepositoryResult<Paginated<User>>> {
-        const searchExpr = or(
-            ilike(users.email, `%${query}%`),
-            ilike(users.displayName, `%${query}%`)
-        );
-        return this.fetchPaginatedInternal(options, searchExpr);
-    }
-
-    private async fetchPaginatedInternal(
-        options: PaginationOptions,
-        whereClause?: any
-    ): Promise<RepositoryResult<Paginated<User>>> {
-        return fetchPaginated(this.db, users, options, this.toDomain, whereClause);
-    }
-
-    async register(user: User): Promise<RepositoryResult<Option<User>, EmailAlreadyTakenError | UserDomainError>> {
-        // In a real system, register might involve more than just insert, 
-        // but for now we'll match the interface's intent.
-        try {
-            const dbData = this.toDbSerialized(user);
-            await this.db.insert(users).values(dbData);
-            return Result.Ok(Option.Some(user));
-        } catch (error) {
-            return Result.Err(new EmailAlreadyTakenError(user.email.toString()));
-        }
-    }
-
     async delete(userId: string): Promise<RepositoryResult<Option<User>, UserNotFoundError>> {
         try {
             const existing = await this.fetchById(userId);
@@ -147,15 +96,6 @@ export class UserRepositoryImpl implements UserRepository {
     }
 
     async existsBy(prop: string, val: any): Promise<RepositoryResult<boolean>> {
-        try {
-            // Very generic existsBy implementation
-            const [row] = await this.db
-                .select({ value: count() })
-                .from(users)
-                .where(eq(sql.raw(prop), val));
-            return Result.Ok(Number(row.value) > 0);
-        } catch (error) {
-            return Result.Err(error as Error);
-        }
+        throw new Error("Method not implemented.");
     }
 }

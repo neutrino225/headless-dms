@@ -35,8 +35,8 @@ export function canAccess(
   policies: AccessPolicy[],
   action: AccessLevel,
 ): Result<void, DocumentAccessError> {
-  const userId = UserId.toString(user.id as UserId);
-  const documentId = document.id as string;
+  const userId = UserId.toString(user.id);
+  const documentId = document.id;
 
   // 1. Admins have unrestricted access
   if (isAdmin(user)) {
@@ -44,7 +44,7 @@ export function canAccess(
   }
 
   // 2. Document owner has unrestricted access
-  if (isOwner(document, user.id as UserId)) {
+  if (isOwner(document, user.id)) {
     return Result.Ok(undefined);
   }
 
