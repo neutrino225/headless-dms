@@ -14,6 +14,11 @@ export class UserNotFoundError extends NotFoundError {
 
 export class UserValidationError extends ValidationError {
 	readonly code = "USER_VALIDATION_ERROR";
+
+	constructor(message: string, options?: { details?: any }) {
+		super(message);
+		this.details = options?.details;
+	}
 }
 
 export class UserAlreadyExistsError extends ValidationError {

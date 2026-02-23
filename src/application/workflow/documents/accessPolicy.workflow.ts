@@ -11,8 +11,10 @@ import {
 	UpdateAccessDTOSchema,
 } from "@application/dto/access-policy/access-policy.dto";
 import type { CallerContext } from "@application/workflow/caller-context";
+import { WorkflowInfraError } from "@application/errors";
 import {
 	fromResult,
+	mapInfraError,
 	repoCall,
 	unwrapOption,
 } from "@application/workflow/workflow.utils";
@@ -21,9 +23,13 @@ import {
 	type IAccessPolicy,
 } from "@domain/access-policy/access-policy.entity";
 import {
-	type AccessDeniedError,
 	AccessPolicyNotFoundError,
+	AccessPolicyValidationError,
 } from "@domain/access-policy/access-policy.errors";
+import {
+	DocumentAccessDeniedError,
+	NoAccessPolicyError,
+} from "@domain/services/document-access.errors";
 import type { AccessPolicyRepository } from "@domain/access-policy/access-policy.repository";
 import {
 	AuditLog,
@@ -47,9 +53,11 @@ import { Effect as E, pipe, Schema as S } from "effect";
 import { inject, injectable } from "tsyringe";
 
 type AccessPolicyWorkflowError =
-	| Error
+	| WorkflowInfraError
 	| AccessPolicyNotFoundError
-	| AccessDeniedError
+	| AccessPolicyValidationError
+	| DocumentAccessDeniedError
+	| NoAccessPolicyError
 	| DocumentNotFoundError
 	| UserNotFoundError
 	| InsufficientPermissionsError;
@@ -79,7 +87,12 @@ export class AccessPolicyWorkflows {
 	): E.Effect<AccessPolicy, AccessPolicyWorkflowError> {
 		return pipe(
 			S.decodeUnknown(GrantAccessDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new AccessPolicyValidationError(
+						"Validation failed",
+					) as AccessPolicyWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					// Verify document and user both exist + auth check on document
@@ -151,7 +164,8 @@ export class AccessPolicyWorkflows {
 					),
 				),
 			),
-		);
+			mapInfraError("accessPolicy.grantAccess"),
+		) as E.Effect<AccessPolicy, AccessPolicyWorkflowError>;
 	}
 
 	/**
@@ -164,7 +178,12 @@ export class AccessPolicyWorkflows {
 	): E.Effect<AccessPolicy, AccessPolicyWorkflowError> {
 		return pipe(
 			S.decodeUnknown(UpdateAccessDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new AccessPolicyValidationError(
+						"Validation failed",
+					) as AccessPolicyWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					repoCall(() => this.accessPolicyRepository.fetchById(dto.policyId)),
@@ -238,7 +257,8 @@ export class AccessPolicyWorkflows {
 					}),
 				),
 			),
-		);
+			mapInfraError("accessPolicy.updateAccess"),
+		) as E.Effect<AccessPolicy, AccessPolicyWorkflowError>;
 	}
 
 	/**
@@ -251,7 +271,12 @@ export class AccessPolicyWorkflows {
 	): E.Effect<AccessPolicy, AccessPolicyWorkflowError> {
 		return pipe(
 			S.decodeUnknown(RevokeAccessDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new AccessPolicyValidationError(
+						"Validation failed",
+					) as AccessPolicyWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					repoCall(() => this.accessPolicyRepository.delete(dto.policyId)),
@@ -308,11 +333,9 @@ export class AccessPolicyWorkflows {
 					E.map(({ policy }) => policy),
 				),
 			),
-		);
+			mapInfraError("accessPolicy.revokeAccess"),
+		) as E.Effect<AccessPolicy, AccessPolicyWorkflowError>;
 	}
-
-	// ── Queries (no authz required) ───────────────────────────────────────
-
 	/**
 	 * Check if a user has a given access level on a document.
 	 * Uses the pure domain service `canAccess`.
@@ -322,7 +345,12 @@ export class AccessPolicyWorkflows {
 	): E.Effect<void, AccessPolicyWorkflowError> {
 		return pipe(
 			S.decodeUnknown(CheckAccessDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new AccessPolicyValidationError(
+						"Validation failed",
+					) as AccessPolicyWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					E.all([
@@ -353,7 +381,8 @@ export class AccessPolicyWorkflows {
 					),
 				),
 			),
-		);
+			mapInfraError("accessPolicy.checkAccess"),
+		) as E.Effect<void, AccessPolicyWorkflowError>;
 	}
 
 	// ── Authorization ─────────────────────────────────────────────────────
@@ -377,7 +406,7 @@ export class AccessPolicyWorkflows {
 		resourceId: string,
 		resourceType: AuditResourceType,
 		metadata?: Record<string, unknown>,
-	): E.Effect<void, Error> {
+	): E.Effect<void, WorkflowInfraError> {
 		return pipe(
 			E.all([
 				fromResult(UUID.create(userId)),
@@ -395,13 +424,14 @@ export class AccessPolicyWorkflows {
 			}),
 			E.flatMap((log) => repoCall(() => this.auditLogRepository.insert(log))),
 			E.map(() => undefined),
-		);
+			mapInfraError("accessPolicy.logAudit"),
+		) as E.Effect<void, WorkflowInfraError>;
 	}
 
 	private resolveCaller(
 		caller: CallerContext | undefined,
 		fallbackUserId: string,
-	): E.Effect<CallerContext, Error | UserNotFoundError> {
+	): E.Effect<CallerContext, WorkflowInfraError | UserNotFoundError> {
 		if (caller) return E.succeed(caller);
 
 		return pipe(
@@ -414,6 +444,7 @@ export class AccessPolicyWorkflows {
 				role: user.role,
 				workspaceId: user.workspaceId,
 			})),
-		);
+			mapInfraError("accessPolicy.resolveCaller"),
+		) as E.Effect<CallerContext, WorkflowInfraError | UserNotFoundError>;
 	}
 }

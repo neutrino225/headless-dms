@@ -1,4 +1,6 @@
+import { WorkflowInfraError } from "@application/errors";
 import type { Option, Result } from "@carbonteq/fp";
+import { DomainError } from "@domain/shared/base.errors";
 import { Effect as E } from "effect";
 
 /**
@@ -27,3 +29,35 @@ export const repoCall = <T, Err>(
 		try: fn,
 		catch: (e): Error => (e instanceof Error ? e : new Error(String(e))),
 	}).pipe(E.flatMap((result) => fromResult(result)));
+
+/**
+ * Map any infrastructure error (DbOperationError, thrown Error) to
+ * WorkflowInfraError, while letting domain errors pass through unchanged.
+ *
+ * Apply this at the end of every repoCall chain to maintain the "one layer
+ * deep" rule: the presentation layer must never see raw infrastructure errors.
+ *
+ * Usage:
+ *   repoCall(() => repo.fetchById(id)).pipe(
+ *     E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(id))),
+ *     mapInfraError("user.fetchById"),
+ *   )
+ */
+export const mapInfraError =
+	(operation: string) =>
+	<T, E2>(
+		effect: E.Effect<T, E2 | Error>,
+	): E.Effect<T, E2 | WorkflowInfraError> =>
+		effect.pipe(
+			E.mapError((err) => {
+				if (err instanceof DomainError) return err as E2;
+				// err.code check handles hot-reload instanceof failures for DomainError
+				if (
+					typeof (err as any)?.code === "string" &&
+					(err as any).code !== "DB_OPERATION_ERROR"
+				) {
+					return err as E2;
+				}
+				return new WorkflowInfraError(operation);
+			}),
+		);

@@ -12,8 +12,9 @@ import {
 } from "@application/dto/user/user.dto";
 import type { CallerContext } from "@application/workflow/caller-context";
 import type { UserWorkflows } from "@application/workflow/users/user.workflow";
+import type { Logger } from "@infra/logger/logger";
 import { Schema as S } from "effect";
-import type { AuthContext } from "../middleware/context";
+import type { AuthContext, InitialContext } from "../middleware/context";
 import { runEffect } from "./effect-runner";
 import { toUserResponse } from "./response-mappers";
 import { toStandard } from "./schema-adapter";
@@ -28,10 +29,12 @@ function callerFrom(ctx: AuthContext): CallerContext {
 }
 
 export function createUserProcedures(
+	publicBase: ProcedureBuilderWithMiddleware,
 	authBase: ProcedureBuilderWithMiddleware,
 	workflows: UserWorkflows,
+	logger?: Logger,
 ) {
-	const createUser = authBase
+	const createUser = publicBase
 		.input(toStandard(CreateUserDTOSchema))
 		.handler(
 			async ({
@@ -39,10 +42,14 @@ export function createUserProcedures(
 				context,
 			}: {
 				input: CreateUserDTO;
-				context: AuthContext;
+				context: InitialContext | AuthContext;
 			}) => {
 				const user = await runEffect(
-					workflows.createUser(input, callerFrom(context)),
+					workflows.createUser(
+						input,
+						"user" in context ? callerFrom(context as AuthContext) : undefined,
+					),
+					logger,
 				);
 				return toUserResponse(user);
 			},
@@ -60,6 +67,7 @@ export function createUserProcedures(
 			}) => {
 				const user = await runEffect(
 					workflows.updateUser(input, callerFrom(context)),
+					logger,
 				);
 				return toUserResponse(user);
 			},
@@ -77,6 +85,7 @@ export function createUserProcedures(
 			}) => {
 				const user = await runEffect(
 					workflows.deleteUser(input, callerFrom(context)),
+					logger,
 				);
 				return toUserResponse(user);
 			},
@@ -85,14 +94,17 @@ export function createUserProcedures(
 	const getById = authBase
 		.input(toStandard(S.Struct({ id: S.String })))
 		.handler(async ({ input }: { input: { id: string } }) => {
-			const user = await runEffect(workflows.getUserById(input.id));
+			const user = await runEffect(workflows.getUserById(input.id), logger);
 			return toUserResponse(user);
 		});
 
 	const getByEmail = authBase
 		.input(toStandard(S.Struct({ email: S.String })))
 		.handler(async ({ input }: { input: { email: string } }) => {
-			const user = await runEffect(workflows.getUserByEmail(input.email));
+			const user = await runEffect(
+				workflows.getUserByEmail(input.email),
+				logger,
+			);
 			return toUserResponse(user);
 		});
 

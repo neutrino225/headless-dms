@@ -3,17 +3,20 @@ import { Document } from "@domain/document/document.entity";
 import type { DocumentStatus } from "@domain/document/document.enums";
 import {
 	DocumentNotFoundError,
-	DocumentValidationError,
 	DocumentVersionNotFoundError,
 } from "@domain/document/document.errors";
 import type { DocumentRepository } from "@domain/document/document.repository";
 import { DocumentVersion } from "@domain/document/document-version.entity";
 import type { RepositoryResult } from "@domain/shared/base.repository";
 import type { Paginated, PaginationOptions } from "@domain/shared/pagination";
+import { DbOperationError } from "@infra/errors";
 import { documents, documentVersions } from "@infra/db/schema";
 import { fetchPaginated } from "@infra/repositories/utils/pagination.util";
 import { and, desc, eq } from "drizzle-orm";
 import { injectable } from "tsyringe";
+
+// PostgreSQL unique-constraint violation code
+const PG_UNIQUE_VIOLATION = "23505";
 
 type DrizzleDB = any;
 
@@ -53,7 +56,7 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 
 	async insert(
 		entity: Document,
-	): Promise<RepositoryResult<Option<Document>, DocumentValidationError>> {
+	): Promise<RepositoryResult<Option<Document>, Error>> {
 		try {
 			const docData = this.documentToDb(entity);
 			const versionsData = entity.versions.map((v) => this.versionToDb(v));
@@ -70,20 +73,28 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 
 			return Result.Ok(Option.Some(entity));
 		} catch (error) {
-			return Result.Err(
-				new DocumentValidationError(
-					`Failed to insert document aggregate: ${error}`,
-				),
-			);
+			// 23505 = unique slug constraint or other unique violation
+			if ((error as any)?.code === PG_UNIQUE_VIOLATION) {
+				return Result.Err(
+					new DbOperationError(
+						`document.insert (duplicate slug or id: ${entity.slug})`,
+						error,
+					),
+				);
+			}
+			return Result.Err(new DbOperationError("document.insert", error));
 		}
 	}
 
 	async update(
 		entity: Document,
-	): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>> {
+	): Promise<
+		RepositoryResult<Option<Document>, DocumentNotFoundError | Error>
+	> {
 		try {
 			const docData = this.documentToDb(entity);
 			const versionsData = entity.versions.map((v) => this.versionToDb(v));
+			let notFound = false;
 
 			await this.db.transaction(async (tx: any) => {
 				const result = await tx
@@ -93,7 +104,8 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 					.returning();
 
 				if (result.length === 0) {
-					throw new DocumentNotFoundError(entity.id.toString());
+					notFound = true;
+					return;
 				}
 
 				if (versionsData.length > 0) {
@@ -104,15 +116,18 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 				}
 			});
 
+			if (notFound) {
+				return Result.Err(new DocumentNotFoundError(entity.id.toString()));
+			}
 			return Result.Ok(Option.Some(entity));
-		} catch (_error) {
-			return Result.Err(new DocumentNotFoundError(entity.id.toString()));
+		} catch (error) {
+			return Result.Err(new DbOperationError("document.update", error));
 		}
 	}
 
 	async fetchById(
 		id: string,
-	): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>> {
+	): Promise<RepositoryResult<Option<Document>, Error>> {
 		try {
 			const rawDoc = await this.db.query.documents.findFirst({
 				where: eq(documents.id, id),
@@ -128,14 +143,14 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 
 			const versions = rawVersions.map((v: any) => this.versionToDomain(v));
 			return Result.Ok(Option.Some(this.docToDomain(rawDoc, versions)));
-		} catch (_error) {
-			return Result.Err(new DocumentNotFoundError(id));
+		} catch (error) {
+			return Result.Err(new DbOperationError("document.fetchById", error));
 		}
 	}
 
 	async fetchBySlug(
 		slug: string,
-	): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>> {
+	): Promise<RepositoryResult<Option<Document>, Error>> {
 		try {
 			const rawDoc = await this.db.query.documents.findFirst({
 				where: eq(documents.slug, slug),
@@ -150,14 +165,16 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 
 			const versions = rawVersions.map((v: any) => this.versionToDomain(v));
 			return Result.Ok(Option.Some(this.docToDomain(rawDoc, versions)));
-		} catch (_error) {
-			return Result.Err(new DocumentNotFoundError(`slug: ${slug}`));
+		} catch (error) {
+			return Result.Err(new DbOperationError("document.fetchBySlug", error));
 		}
 	}
 
 	async delete(
 		id: string,
-	): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>> {
+	): Promise<
+		RepositoryResult<Option<Document>, DocumentNotFoundError | Error>
+	> {
 		try {
 			const existing = await this.fetchById(id);
 			if (existing.isErr()) return existing;
@@ -167,12 +184,10 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 				return Result.Err(new DocumentNotFoundError(id));
 			}
 
-			// Cascading delete should handle versions if configured in DB,
-			// but we do it explicitly here if needed or just trust DB
 			await this.db.delete(documents).where(eq(documents.id, id));
 			return Result.Ok(maybeDocument);
-		} catch (_error) {
-			return Result.Err(new DocumentNotFoundError(id));
+		} catch (error) {
+			return Result.Err(new DbOperationError("document.delete", error));
 		}
 	}
 
@@ -203,9 +218,7 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 
 	async fetchVersionById(
 		id: string,
-	): Promise<
-		RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>
-	> {
+	): Promise<RepositoryResult<Option<DocumentVersion>, Error>> {
 		try {
 			const raw = await this.db.query.documentVersions.findFirst({
 				where: eq(documentVersions.id, id),
@@ -213,8 +226,10 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 			return Result.Ok(
 				Option.fromNullable(raw).map((v) => this.versionToDomain(v)),
 			);
-		} catch (_error) {
-			return Result.Err(new DocumentVersionNotFoundError(id));
+		} catch (error) {
+			return Result.Err(
+				new DbOperationError("document.fetchVersionById", error),
+			);
 		}
 	}
 
@@ -234,9 +249,7 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 
 	async fetchLatestVersionByDocumentId(
 		documentId: string,
-	): Promise<
-		RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>
-	> {
+	): Promise<RepositoryResult<Option<DocumentVersion>, Error>> {
 		try {
 			const raw = await this.db.query.documentVersions.findFirst({
 				where: eq(documentVersions.documentId, documentId),
@@ -245,16 +258,16 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 			return Result.Ok(
 				Option.fromNullable(raw).map((v) => this.versionToDomain(v)),
 			);
-		} catch (_error) {
-			return Result.Err(new DocumentVersionNotFoundError(documentId));
+		} catch (error) {
+			return Result.Err(
+				new DbOperationError("document.fetchLatestVersion", error),
+			);
 		}
 	}
 
 	async fetchVersionByStorageKey(
 		storageKey: string,
-	): Promise<
-		RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>
-	> {
+	): Promise<RepositoryResult<Option<DocumentVersion>, Error>> {
 		try {
 			const raw = await this.db.query.documentVersions.findFirst({
 				where: eq(documentVersions.storageKey, storageKey),
@@ -262,15 +275,20 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 			return Result.Ok(
 				Option.fromNullable(raw).map((v) => this.versionToDomain(v)),
 			);
-		} catch (_error) {
-			return Result.Err(new DocumentVersionNotFoundError(storageKey));
+		} catch (error) {
+			return Result.Err(
+				new DbOperationError("document.fetchVersionByStorageKey", error),
+			);
 		}
 	}
 
 	async deleteVersion(
 		versionId: string,
 	): Promise<
-		RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>
+		RepositoryResult<
+			Option<DocumentVersion>,
+			DocumentVersionNotFoundError | Error
+		>
 	> {
 		try {
 			const existing = await this.fetchVersionById(versionId);
@@ -285,8 +303,8 @@ export class DocumentRepositoryImpl implements DocumentRepository {
 				.delete(documentVersions)
 				.where(eq(documentVersions.id, versionId));
 			return Result.Ok(maybeVersion);
-		} catch (_error) {
-			return Result.Err(new DocumentVersionNotFoundError(versionId));
+		} catch (error) {
+			return Result.Err(new DbOperationError("document.deleteVersion", error));
 		}
 	}
 }

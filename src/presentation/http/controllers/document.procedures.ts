@@ -16,6 +16,7 @@ import {
 } from "@application/dto/document/document.dto";
 import type { CallerContext } from "@application/workflow/caller-context";
 import type { DocumentWorkflows } from "@application/workflow/documents/document.workflow";
+import type { Logger } from "@infra/logger/logger";
 import type { AuthContext } from "../middleware/context";
 import { runEffect } from "./effect-runner";
 import {

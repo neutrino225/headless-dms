@@ -14,6 +14,7 @@ import {
 } from "@application/dto/access-policy/access-policy.dto";
 import type { CallerContext } from "@application/workflow/caller-context";
 import type { AccessPolicyWorkflows } from "@application/workflow/documents/accessPolicy.workflow";
+import type { Logger } from "@infra/logger/logger";
 import type { AuthContext } from "../middleware/context";
 import { runEffect } from "./effect-runner";
 import { toAccessPolicyResponse } from "./response-mappers";
@@ -31,6 +32,7 @@ function callerFrom(ctx: AuthContext): CallerContext {
 export function createAccessPolicyProcedures(
 	authBase: ProcedureBuilderWithMiddleware,
 	workflows: AccessPolicyWorkflows,
+	logger?: Logger,
 ) {
 	const grantAccess = authBase
 		.input(toStandard(GrantAccessDTOSchema))
@@ -44,6 +46,7 @@ export function createAccessPolicyProcedures(
 			}) => {
 				const policy = await runEffect(
 					workflows.grantAccess(input, callerFrom(context)),
+					logger,
 				);
 				return toAccessPolicyResponse(policy);
 			},
@@ -61,6 +64,7 @@ export function createAccessPolicyProcedures(
 			}) => {
 				const policy = await runEffect(
 					workflows.updateAccess(input, callerFrom(context)),
+					logger,
 				);
 				return toAccessPolicyResponse(policy);
 			},
@@ -78,6 +82,7 @@ export function createAccessPolicyProcedures(
 			}) => {
 				const policy = await runEffect(
 					workflows.revokeAccess(input, callerFrom(context)),
+					logger,
 				);
 				return toAccessPolicyResponse(policy);
 			},
@@ -86,8 +91,13 @@ export function createAccessPolicyProcedures(
 	const checkAccess = authBase
 		.input(toStandard(CheckAccessDTOSchema))
 		.handler(async ({ input }: { input: CheckAccessDTO }) => {
-			await runEffect(workflows.checkAccess(input));
-			return { allowed: true };
+			try {
+				await runEffect(workflows.checkAccess(input), logger);
+				return { allowed: true as const };
+			} catch {
+				// checkAccess throws when denied; translate to a clean boolean response
+				return { allowed: false as const };
+			}
 		});
 
 	return {

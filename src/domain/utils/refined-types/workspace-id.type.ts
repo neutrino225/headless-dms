@@ -2,13 +2,18 @@ import { Result } from "@carbonteq/fp";
 import { createRefinedType } from "@carbonteq/refined-type";
 import * as z from "zod";
 
+// Matches any UUID format (v1-v8, nil, custom) — not restricted to v4.
+// Zod v4's z.string().uuid() only accepts v4, which is too strict for workspace IDs.
+const UUID_PATTERN =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Workspace ID format:
- * - Normalized to lowercase UUID
+ * - Any UUID format (case-insensitive), normalized to lowercase
  */
 export const WorkspaceIdType = createRefinedType(
 	"WorkspaceId",
-	z.string().uuid().toLowerCase(),
+	z.string().regex(UUID_PATTERN).toLowerCase(),
 );
 
 export type WorkspaceId = typeof WorkspaceIdType.$infer;

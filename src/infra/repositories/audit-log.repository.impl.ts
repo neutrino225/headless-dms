@@ -2,6 +2,7 @@ import { Option, Result } from "@carbonteq/fp";
 import { AuditLog } from "@domain/audit-log/audit-log.entity";
 import type { AuditLogRepository } from "@domain/audit-log/audit-log.repository";
 import type { RepositoryResult } from "@domain/shared/base.repository";
+import { DbOperationError } from "@infra/errors";
 import { auditLogs } from "@infra/db/schema";
 import { eq } from "drizzle-orm";
 import { injectable } from "tsyringe";
@@ -32,7 +33,7 @@ export class AuditLogRepositoryImpl implements AuditLogRepository {
 			await this.db.insert(auditLogs).values(dbData);
 			return Result.Ok(Option.Some(entity));
 		} catch (error) {
-			return Result.Err(error as Error);
+			return Result.Err(new DbOperationError("auditLog.insert", error));
 		}
 	}
 
@@ -45,7 +46,7 @@ export class AuditLogRepositoryImpl implements AuditLogRepository {
 			});
 			return Result.Ok(Option.fromNullable(raw).map(this.toDomain));
 		} catch (error) {
-			return Result.Err(error as Error);
+			return Result.Err(new DbOperationError("auditLog.fetchById", error));
 		}
 	}
 }

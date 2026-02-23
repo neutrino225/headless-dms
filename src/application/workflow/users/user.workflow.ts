@@ -8,9 +8,11 @@ import {
 	type UpdateUserDTOEncoded,
 	UpdateUserDTOSchema,
 } from "@application/dto/user/user.dto";
+import { WorkflowInfraError } from "@application/errors";
 import type { CallerContext } from "@application/workflow/caller-context";
 import {
 	fromResult,
+	mapInfraError,
 	repoCall,
 	unwrapOption,
 } from "@application/workflow/workflow.utils";
@@ -26,6 +28,7 @@ import {
 	type UserAlreadyExistsError,
 	UserNotFoundError,
 	UserUnauthorizedError,
+	UserValidationError,
 } from "@domain/user/user.errors";
 import type { UserRepository } from "@domain/user/user.repository";
 import { Email, WorkspaceId } from "@domain/utils";
@@ -35,14 +38,26 @@ import { Effect as E, Schema as S } from "effect";
 import { inject, injectable } from "tsyringe";
 
 type CreateUserError =
-	| Error
+	| WorkflowInfraError
 	| UserAlreadyExistsError
 	| EmailAlreadyTakenError
+	| UserValidationError
 	| AdminRequiredError;
-type UpdateUserError = Error | UserNotFoundError | InsufficientPermissionsError;
-type DeleteUserError = Error | UserNotFoundError | AdminRequiredError;
-type GetUserError = Error | UserNotFoundError;
-type AuthenticateUserError = Error | UserNotFoundError | UserUnauthorizedError;
+type UpdateUserError =
+	| WorkflowInfraError
+	| UserNotFoundError
+	| InsufficientPermissionsError
+	| UserValidationError;
+type DeleteUserError =
+	| WorkflowInfraError
+	| UserNotFoundError
+	| AdminRequiredError
+	| UserValidationError;
+type GetUserError = WorkflowInfraError | UserNotFoundError;
+type AuthenticateUserError =
+	| WorkflowInfraError
+	| UserNotFoundError
+	| UserUnauthorizedError;
 
 @injectable()
 export class UserWorkflows {
@@ -56,7 +71,12 @@ export class UserWorkflows {
 		caller?: CallerContext,
 	): E.Effect<User, CreateUserError> {
 		return S.decodeUnknown(CreateUserDTOSchema)(input).pipe(
-			E.mapError(() => new Error("Validation failed") as CreateUserError),
+			E.mapError(
+				(error) =>
+					new UserValidationError("Validation failed", {
+						details: String(error),
+					}) as CreateUserError,
+			),
 			E.tap(() => {
 				if (caller && caller.role !== UserRole.ADMIN) {
 					return E.fail(new AdminRequiredError("createUser"));
@@ -73,6 +93,12 @@ export class UserWorkflows {
 							new Error(`Failed to hash password: ${String(cause)}`),
 					}),
 				]).pipe(
+					E.mapError(
+						(err) =>
+							new UserValidationError(
+								err instanceof Error ? err.message : String(err),
+							) as CreateUserError,
+					),
 					E.map(
 						([workspaceId, email, passwordHash]): CreateEntity<IUser> => ({
 							workspaceId,
@@ -93,6 +119,7 @@ export class UserWorkflows {
 					),
 				),
 			),
+			mapInfraError("user.createUser"),
 		);
 	}
 
@@ -101,7 +128,9 @@ export class UserWorkflows {
 		caller?: CallerContext,
 	): E.Effect<User, UpdateUserError> {
 		return S.decodeUnknown(UpdateUserDTOSchema)(input).pipe(
-			E.mapError(() => new Error("Validation failed") as UpdateUserError),
+			E.mapError(
+				() => new UserValidationError("Validation failed") as UpdateUserError,
+			),
 			E.tap((dto) => {
 				if (!caller) return E.succeed(undefined);
 				return this.requireAdminOrSelf(caller, dto.id, "updateUser");
@@ -140,6 +169,7 @@ export class UserWorkflows {
 					),
 				),
 			),
+			mapInfraError("user.updateUser"),
 		);
 	}
 
@@ -148,7 +178,9 @@ export class UserWorkflows {
 		caller?: CallerContext,
 	): E.Effect<User, DeleteUserError> {
 		return S.decodeUnknown(RemoveUserDTOSchema)(input).pipe(
-			E.mapError(() => new Error("Validation failed") as DeleteUserError),
+			E.mapError(
+				() => new UserValidationError("Validation failed") as DeleteUserError,
+			),
 			E.tap(() => {
 				if (caller && caller.role !== UserRole.ADMIN) {
 					return E.fail(new AdminRequiredError("deleteUser"));
@@ -160,19 +192,22 @@ export class UserWorkflows {
 					E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(dto.id))),
 				),
 			),
+			mapInfraError("user.deleteUser"),
 		);
 	}
 
 	getUserById(id: string): E.Effect<User, GetUserError> {
 		return repoCall(() => this.userRepository.fetchById(id)).pipe(
 			E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(id))),
-		);
+			mapInfraError("user.getUserById"),
+		) as E.Effect<User, GetUserError>;
 	}
 
 	getUserByEmail(email: string): E.Effect<User, GetUserError> {
 		return repoCall(() => this.userRepository.fetchByEmail(email)).pipe(
 			E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(email))),
-		);
+			mapInfraError("user.getUserByEmail"),
+		) as E.Effect<User, GetUserError>;
 	}
 
 	authenticateUser(
@@ -181,24 +216,28 @@ export class UserWorkflows {
 	): E.Effect<User, AuthenticateUserError> {
 		return repoCall(() => this.userRepository.fetchByEmail(email)).pipe(
 			E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(email))),
-			E.flatMap((user) =>
-				E.tryPromise({
-					try: async () => {
-						if (!user.isActive) {
-							throw new UserUnauthorizedError("User account is inactive");
-						}
-						const ok = await bcrypt.compare(password, user.passwordHash);
-						if (!ok) {
-							throw new UserUnauthorizedError("Invalid credentials");
-						}
-						return user;
-					},
+			E.flatMap((user) => {
+				if (!user.isActive) {
+					return E.fail<AuthenticateUserError>(
+						new UserUnauthorizedError("User account is inactive"),
+					);
+				}
+				// Run bcrypt comparison as an Effect — no throws, no instanceof re-checks
+				return E.tryPromise({
+					try: () => bcrypt.compare(password, user.passwordHash),
 					catch: (cause) =>
-						cause instanceof UserUnauthorizedError
-							? cause
-							: new Error(`Authentication failed: ${String(cause)}`),
-				}),
-			),
+						new Error(`bcrypt comparison failed: ${String(cause)}`),
+				}).pipe(
+					E.flatMap((ok) =>
+						ok
+							? E.succeed(user)
+							: E.fail<AuthenticateUserError>(
+									new UserUnauthorizedError("Invalid credentials"),
+								),
+					),
+				);
+			}),
+			mapInfraError("user.authenticateUser"),
 		);
 	}
 

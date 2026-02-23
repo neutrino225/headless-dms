@@ -9,7 +9,7 @@
  */
 
 import type { Logger } from "@infra/logger/logger";
-import { onError } from "@orpc/server";
+import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { CORSPlugin } from "@orpc/server/plugins";
 import { Hono } from "hono";
@@ -42,9 +42,19 @@ export function createApp({ router, corsOrigin, logger }: CreateAppOptions) {
 		],
 		interceptors: [
 			onError((error) => {
-				logger.error("oRPC handler error", {
-					errorMessage: error instanceof Error ? error.message : String(error),
-				});
+				const isValidationError =
+					error instanceof ORPCError &&
+					(error.code === "BAD_REQUEST" ||
+						error.message.includes("validation"));
+
+				logger.error(
+					isValidationError ? "Validation error" : "oRPC handler error",
+					{
+						errorMessage:
+							error instanceof Error ? error.message : String(error),
+						data: error instanceof ORPCError ? error.data : undefined,
+					},
+				);
 			}),
 		],
 	});
@@ -53,23 +63,28 @@ export function createApp({ router, corsOrigin, logger }: CreateAppOptions) {
 	app.get("/health", (c) => c.json({ status: "ok" }));
 
 	// oRPC handler — all RPC traffic goes through /rpc/*
-	app.use("/rpc/*", async (c, next) => {
+	app.all("/rpc/*", async (c) => {
 		const correlationId =
 			(c.get("correlationId") as string | undefined) ?? crypto.randomUUID();
 
-		const { matched, response } = await handler.handle(c.req.raw, {
+		// We clone the request to avoid locking the stream for oRPC
+		const req = c.req.raw.clone();
+
+		const { matched, response } = await handler.handle(req, {
 			prefix: "/rpc",
 			context: {
-				headers: c.req.raw.headers,
+				headers: req.headers,
 				correlationId,
 			},
 		});
 
 		if (matched) {
-			return c.newResponse(response.body, response);
+			const res = c.newResponse(response.body, response);
+			res.headers.set("x-correlation-id", correlationId);
+			return res;
 		}
 
-		await next();
+		return c.notFound();
 	});
 
 	return app;

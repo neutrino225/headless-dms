@@ -10,8 +10,10 @@ import {
 } from "@application/dto/document/document.dto";
 import type { ObjectStoragePort } from "@application/services/object-storage.port";
 import type { CallerContext } from "@application/workflow/caller-context";
+import { WorkflowInfraError } from "@application/errors";
 import {
 	fromResult,
+	mapInfraError,
 	repoCall,
 	unwrapOption,
 } from "@application/workflow/workflow.utils";
@@ -25,6 +27,7 @@ import type { AuditLogRepository } from "@domain/audit-log/audit-log.repository"
 import type { Document } from "@domain/document/document.entity";
 import {
 	DocumentNotFoundError,
+	DocumentValidationError,
 	DocumentVersionNotFoundError,
 } from "@domain/document/document.errors";
 import { isOwner } from "@domain/document/document.guards";
@@ -52,8 +55,9 @@ import { Effect as E, pipe, Schema as S } from "effect";
 import { inject, injectable } from "tsyringe";
 
 type UploadWorkflowError =
-	| Error
+	| WorkflowInfraError
 	| DocumentNotFoundError
+	| DocumentValidationError
 	| DocumentVersionNotFoundError
 	| UserNotFoundError
 	| InsufficientPermissionsError;
@@ -90,7 +94,12 @@ export class UploadWorkflows {
 	): E.Effect<UploadInitiation, UploadWorkflowError> {
 		return pipe(
 			S.decodeUnknown(InitiateUploadDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new DocumentValidationError(
+						"Validation failed",
+					) as UploadWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					repoCall(() => this.documentRepository.fetchById(dto.documentId)),
@@ -134,7 +143,8 @@ export class UploadWorkflows {
 					),
 				),
 			),
-		);
+			mapInfraError("upload.initiateUpload"),
+		) as E.Effect<UploadInitiation, UploadWorkflowError>;
 	}
 
 	/**
@@ -147,7 +157,12 @@ export class UploadWorkflows {
 	): E.Effect<DocumentVersion, UploadWorkflowError> {
 		return pipe(
 			S.decodeUnknown(ConfirmUploadDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new DocumentValidationError(
+						"Validation failed",
+					) as UploadWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					// Idempotency: if a version with this storageKey was already confirmed, return it.
@@ -235,7 +250,8 @@ export class UploadWorkflows {
 					}),
 				),
 			),
-		);
+			mapInfraError("upload.confirmUpload"),
+		) as E.Effect<DocumentVersion, UploadWorkflowError>;
 	}
 
 	/**
@@ -267,7 +283,8 @@ export class UploadWorkflows {
 					),
 				),
 			),
-		);
+			mapInfraError("upload.deleteVersion"),
+		) as E.Effect<DocumentVersion, UploadWorkflowError>;
 	}
 
 	// ── Queries (no authz required — any authenticated user) ──────────────
@@ -280,7 +297,12 @@ export class UploadWorkflows {
 	): E.Effect<Paginated<DocumentVersion>, UploadWorkflowError> {
 		return pipe(
 			S.decodeUnknown(ListDocumentVersionsDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new DocumentValidationError(
+						"Validation failed",
+					) as UploadWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					fromResult(
@@ -299,7 +321,8 @@ export class UploadWorkflows {
 					),
 				),
 			),
-		);
+			mapInfraError("upload.listVersions"),
+		) as E.Effect<Paginated<DocumentVersion>, UploadWorkflowError>;
 	}
 
 	/**
@@ -315,7 +338,8 @@ export class UploadWorkflows {
 			E.flatMap((opt) =>
 				unwrapOption(opt, new DocumentVersionNotFoundError(documentId)),
 			),
-		);
+			mapInfraError("upload.getLatestVersion"),
+		) as E.Effect<DocumentVersion, UploadWorkflowError>;
 	}
 
 	// ── Authorization ─────────────────────────────────────────────────────
@@ -338,7 +362,7 @@ export class UploadWorkflows {
 		action: AuditAction,
 		resourceId: string,
 		resourceType: AuditResourceType,
-	): E.Effect<void, Error> {
+	): E.Effect<void, WorkflowInfraError> {
 		return pipe(
 			E.all([
 				fromResult(UUID.create(userId)),
@@ -356,13 +380,14 @@ export class UploadWorkflows {
 			}),
 			E.flatMap((log) => repoCall(() => this.auditLogRepository.insert(log))),
 			E.map(() => undefined),
-		);
+			mapInfraError("upload.logAudit"),
+		) as E.Effect<void, WorkflowInfraError>;
 	}
 
 	private resolveCaller(
 		caller: CallerContext | undefined,
 		fallbackUserId: string,
-	): E.Effect<CallerContext, Error | UserNotFoundError> {
+	): E.Effect<CallerContext, WorkflowInfraError | UserNotFoundError> {
 		if (caller) return E.succeed(caller);
 
 		return pipe(
@@ -375,6 +400,7 @@ export class UploadWorkflows {
 				role: user.role,
 				workspaceId: user.workspaceId,
 			})),
-		);
+			mapInfraError("upload.resolveCaller"),
+		) as E.Effect<CallerContext, WorkflowInfraError | UserNotFoundError>;
 	}
 }

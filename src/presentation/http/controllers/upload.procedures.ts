@@ -12,6 +12,7 @@ import {
 } from "@application/dto/document/document.dto";
 import type { CallerContext } from "@application/workflow/caller-context";
 import type { UploadWorkflows } from "@application/workflow/documents/upload.workflow";
+import type { Logger } from "@infra/logger/logger";
 import { Schema as S } from "effect";
 import type { AuthContext } from "../middleware/context";
 import { runEffect } from "./effect-runner";
@@ -33,6 +34,7 @@ function callerFrom(ctx: AuthContext): CallerContext {
 export function createUploadProcedures(
 	authBase: ProcedureBuilderWithMiddleware,
 	workflows: UploadWorkflows,
+	logger?: Logger,
 ) {
 	const initiateUpload = authBase
 		.input(toStandard(InitiateUploadDTOSchema))
@@ -46,6 +48,7 @@ export function createUploadProcedures(
 			}) => {
 				const result = await runEffect(
 					workflows.initiateUpload(input, callerFrom(context)),
+					logger,
 				);
 				return toUploadInitiationResponse(result);
 			},
@@ -63,6 +66,7 @@ export function createUploadProcedures(
 			}) => {
 				const version = await runEffect(
 					workflows.confirmUpload(input, callerFrom(context)),
+					logger,
 				);
 				return toDocumentVersionResponse(version);
 			},
@@ -71,7 +75,7 @@ export function createUploadProcedures(
 	const listVersions = authBase
 		.input(toStandard(ListDocumentVersionsDTOSchema))
 		.handler(async ({ input }: { input: ListDocumentVersionsDTO }) => {
-			const result = await runEffect(workflows.listVersions(input));
+			const result = await runEffect(workflows.listVersions(input), logger);
 			return {
 				data: result.data.map(toDocumentVersionResponse),
 				pageNum: result.pageNum,
@@ -85,6 +89,7 @@ export function createUploadProcedures(
 		.handler(async ({ input }: { input: { documentId: string } }) => {
 			const version = await runEffect(
 				workflows.getLatestVersion(input.documentId),
+				logger,
 			);
 			return toDocumentVersionResponse(version);
 		});
@@ -101,6 +106,7 @@ export function createUploadProcedures(
 			}) => {
 				const version = await runEffect(
 					workflows.deleteVersion(input.versionId, callerFrom(context)),
+					logger,
 				);
 				return toDocumentVersionResponse(version);
 			},

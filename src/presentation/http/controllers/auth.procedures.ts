@@ -4,6 +4,7 @@ import {
 	LoginDTOSchema,
 } from "@application/dto/auth/auth.dto";
 import type { UserWorkflows } from "@application/workflow/users/user.workflow";
+import type { Logger } from "@infra/logger/logger";
 import type { JwtPayload } from "@presentation/http/middleware/context";
 import { Schema as S } from "effect";
 import jwt from "jsonwebtoken";
@@ -17,12 +18,14 @@ export function createAuthProcedures(
 	authBase: ProcedureBuilderWithMiddleware,
 	workflows: UserWorkflows,
 	jwtSecret: string,
+	logger?: Logger,
 ) {
 	const login = publicBase
 		.input(toStandard(LoginDTOSchema))
 		.handler(async ({ input }: { input: LoginDTO }) => {
 			const user = await runEffect(
 				workflows.authenticateUser(input.email, input.password),
+				logger,
 			);
 
 			const payload: JwtPayload = {
@@ -52,7 +55,10 @@ export function createAuthProcedures(
 	const me = authBase
 		.input(toStandard(S.Struct({})))
 		.handler(async ({ context }: { context: AuthContext }) => {
-			const user = await runEffect(workflows.getUserById(context.user.sub));
+			const user = await runEffect(
+				workflows.getUserById(context.user.sub),
+				logger,
+			);
 			return {
 				id: user.id,
 				workspaceId: user.workspaceId,

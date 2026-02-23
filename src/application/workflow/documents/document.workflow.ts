@@ -13,8 +13,10 @@ import {
 	UpdateDocumentDTOSchema,
 } from "@application/dto/document/document.dto";
 import type { CallerContext } from "@application/workflow/caller-context";
+import { WorkflowInfraError } from "@application/errors";
 import {
 	fromResult,
+	mapInfraError,
 	repoCall,
 	unwrapOption,
 } from "@application/workflow/workflow.utils";
@@ -31,7 +33,7 @@ import { DocumentStatus } from "@domain/document/document.enums";
 import {
 	type DocumentArchivedError,
 	DocumentNotFoundError,
-	type DocumentValidationError,
+	DocumentValidationError,
 } from "@domain/document/document.errors";
 import { isOwner } from "@domain/document/document.guards";
 import type { DocumentRepository } from "@domain/document/document.repository";
@@ -47,7 +49,7 @@ import { Effect as E, pipe, Schema as S } from "effect";
 import { inject, injectable } from "tsyringe";
 
 type DocumentWorkflowError =
-	| Error
+	| WorkflowInfraError
 	| DocumentNotFoundError
 	| DocumentValidationError
 	| DocumentArchivedError
@@ -73,7 +75,12 @@ export class DocumentWorkflows {
 	): E.Effect<Document, DocumentWorkflowError> {
 		return pipe(
 			S.decodeUnknown(CreateDocumentDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new DocumentValidationError(
+						"Validation failed",
+					) as DocumentWorkflowError,
+			),
 			E.flatMap((dto) => {
 				return pipe(
 					this.resolveCaller(caller, dto.ownerId),
@@ -117,7 +124,8 @@ export class DocumentWorkflows {
 					),
 				);
 			}),
-		);
+			mapInfraError("document.createDocument"),
+		) as E.Effect<Document, DocumentWorkflowError>;
 	}
 
 	updateDocument(
@@ -126,7 +134,12 @@ export class DocumentWorkflows {
 	): E.Effect<Document, DocumentWorkflowError> {
 		return pipe(
 			S.decodeUnknown(UpdateDocumentDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new DocumentValidationError(
+						"Validation failed",
+					) as DocumentWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					repoCall(() => this.documentRepository.fetchById(dto.id)),
@@ -183,7 +196,8 @@ export class DocumentWorkflows {
 					}),
 				),
 			),
-		);
+			mapInfraError("document.updateDocument"),
+		) as E.Effect<Document, DocumentWorkflowError>;
 	}
 
 	changeDocumentStatus(
@@ -192,7 +206,12 @@ export class DocumentWorkflows {
 	): E.Effect<Document, DocumentWorkflowError> {
 		return pipe(
 			S.decodeUnknown(ChangeDocumentStatusDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new DocumentValidationError(
+						"Validation failed",
+					) as DocumentWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					repoCall(() => this.documentRepository.fetchById(dto.id)),
@@ -247,7 +266,8 @@ export class DocumentWorkflows {
 					}),
 				),
 			),
-		);
+			mapInfraError("document.changeDocumentStatus"),
+		) as E.Effect<Document, DocumentWorkflowError>;
 	}
 
 	deleteDocument(
@@ -256,7 +276,12 @@ export class DocumentWorkflows {
 	): E.Effect<Document, DocumentWorkflowError> {
 		return pipe(
 			S.decodeUnknown(DeleteDocumentDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new DocumentValidationError(
+						"Validation failed",
+					) as DocumentWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					// Load first to check authorization before deleting
@@ -293,7 +318,8 @@ export class DocumentWorkflows {
 					),
 				),
 			),
-		);
+			mapInfraError("document.deleteDocument"),
+		) as E.Effect<Document, DocumentWorkflowError>;
 	}
 
 	// ── Queries (no authz required — any authenticated user) ──────────────
@@ -302,14 +328,16 @@ export class DocumentWorkflows {
 		return pipe(
 			repoCall(() => this.documentRepository.fetchById(id)),
 			E.flatMap((opt) => unwrapOption(opt, new DocumentNotFoundError(id))),
-		);
+			mapInfraError("document.getDocumentById"),
+		) as E.Effect<Document, DocumentWorkflowError>;
 	}
 
 	getDocumentBySlug(slug: string): E.Effect<Document, DocumentWorkflowError> {
 		return pipe(
 			repoCall(() => this.documentRepository.fetchBySlug(slug)),
 			E.flatMap((opt) => unwrapOption(opt, new DocumentNotFoundError(slug))),
-		);
+			mapInfraError("document.getDocumentBySlug"),
+		) as E.Effect<Document, DocumentWorkflowError>;
 	}
 
 	listDocuments(
@@ -317,7 +345,12 @@ export class DocumentWorkflows {
 	): E.Effect<Paginated<Document>, DocumentWorkflowError> {
 		return pipe(
 			S.decodeUnknown(ListDocumentsDTOSchema)(input),
-			E.mapError(() => new Error("Validation failed")),
+			E.mapError(
+				() =>
+					new DocumentValidationError(
+						"Validation failed",
+					) as DocumentWorkflowError,
+			),
 			E.flatMap((dto) =>
 				pipe(
 					fromResult(
@@ -336,7 +369,8 @@ export class DocumentWorkflows {
 					),
 				),
 			),
-		);
+			mapInfraError("document.listDocuments"),
+		) as E.Effect<Paginated<Document>, DocumentWorkflowError>;
 	}
 
 	// ── Authorization ─────────────────────────────────────────────────────
@@ -363,7 +397,7 @@ export class DocumentWorkflows {
 		action: AuditAction,
 		resourceId: string,
 		resourceType: AuditResourceType,
-	): E.Effect<void, Error> {
+	): E.Effect<void, WorkflowInfraError> {
 		return pipe(
 			E.all([
 				fromResult(UUID.create(userId)),
@@ -381,13 +415,14 @@ export class DocumentWorkflows {
 			}),
 			E.flatMap((log) => repoCall(() => this.auditLogRepository.insert(log))),
 			E.map(() => undefined),
-		);
+			mapInfraError("document.logAudit"),
+		) as E.Effect<void, WorkflowInfraError>;
 	}
 
 	private resolveCaller(
 		caller: CallerContext | undefined,
 		fallbackUserId: string,
-	): E.Effect<CallerContext, Error | UserNotFoundError> {
+	): E.Effect<CallerContext, WorkflowInfraError | UserNotFoundError> {
 		if (caller) return E.succeed(caller);
 
 		return pipe(
@@ -400,6 +435,7 @@ export class DocumentWorkflows {
 				role: user.role,
 				workspaceId: user.workspaceId,
 			})),
-		);
+			mapInfraError("document.resolveCaller"),
+		) as E.Effect<CallerContext, WorkflowInfraError | UserNotFoundError>;
 	}
 }

@@ -3,6 +3,7 @@ import { AccessPolicy } from "@domain/access-policy/access-policy.entity";
 import { AccessPolicyNotFoundError } from "@domain/access-policy/access-policy.errors";
 import type { AccessPolicyRepository } from "@domain/access-policy/access-policy.repository";
 import type { RepositoryResult } from "@domain/shared/base.repository";
+import { DbOperationError } from "@infra/errors";
 import { accessPolicies } from "@infra/db/schema";
 import { and, eq } from "drizzle-orm";
 import { injectable } from "tsyringe";
@@ -33,14 +34,14 @@ export class AccessPolicyRepositoryImpl implements AccessPolicyRepository {
 			await this.db.insert(accessPolicies).values(dbData);
 			return Result.Ok(Option.Some(entity));
 		} catch (error) {
-			return Result.Err(error as Error);
+			return Result.Err(new DbOperationError("accessPolicy.insert", error));
 		}
 	}
 
 	async update(
 		entity: AccessPolicy,
 	): Promise<
-		RepositoryResult<Option<AccessPolicy>, AccessPolicyNotFoundError>
+		RepositoryResult<Option<AccessPolicy>, AccessPolicyNotFoundError | Error>
 	> {
 		try {
 			const dbData = this.toDbSerialized(entity);
@@ -59,37 +60,28 @@ export class AccessPolicyRepositoryImpl implements AccessPolicyRepository {
 				);
 			}
 			return Result.Ok(Option.Some(entity));
-		} catch (_error) {
-			return Result.Err(
-				new AccessPolicyNotFoundError(
-					entity.documentId.toString(),
-					entity.userId.toString(),
-				),
-			);
+		} catch (error) {
+			return Result.Err(new DbOperationError("accessPolicy.update", error));
 		}
 	}
 
 	async fetchById(
 		id: string,
-	): Promise<
-		RepositoryResult<Option<AccessPolicy>, AccessPolicyNotFoundError>
-	> {
+	): Promise<RepositoryResult<Option<AccessPolicy>, Error>> {
 		try {
 			const raw = await this.db.query.accessPolicies.findFirst({
 				where: eq(accessPolicies.id, id),
 			});
 			return Result.Ok(Option.fromNullable(raw).map(this.toDomain));
-		} catch (_error) {
-			return Result.Err(new AccessPolicyNotFoundError(id, id));
+		} catch (error) {
+			return Result.Err(new DbOperationError("accessPolicy.fetchById", error));
 		}
 	}
 
 	async fetchByDocumentAndUser(
 		documentId: string,
 		userId: string,
-	): Promise<
-		RepositoryResult<Option<AccessPolicy>, AccessPolicyNotFoundError>
-	> {
+	): Promise<RepositoryResult<Option<AccessPolicy>, Error>> {
 		try {
 			const raw = await this.db.query.accessPolicies.findFirst({
 				where: and(
@@ -98,15 +90,17 @@ export class AccessPolicyRepositoryImpl implements AccessPolicyRepository {
 				),
 			});
 			return Result.Ok(Option.fromNullable(raw).map(this.toDomain));
-		} catch (_error) {
-			return Result.Err(new AccessPolicyNotFoundError(documentId, userId));
+		} catch (error) {
+			return Result.Err(
+				new DbOperationError("accessPolicy.fetchByDocumentAndUser", error),
+			);
 		}
 	}
 
 	async delete(
 		id: string,
 	): Promise<
-		RepositoryResult<Option<AccessPolicy>, AccessPolicyNotFoundError>
+		RepositoryResult<Option<AccessPolicy>, AccessPolicyNotFoundError | Error>
 	> {
 		try {
 			const existing = await this.fetchById(id);
@@ -119,8 +113,8 @@ export class AccessPolicyRepositoryImpl implements AccessPolicyRepository {
 
 			await this.db.delete(accessPolicies).where(eq(accessPolicies.id, id));
 			return Result.Ok(maybePolicy);
-		} catch (_error) {
-			return Result.Err(new AccessPolicyNotFoundError(id, id));
+		} catch (error) {
+			return Result.Err(new DbOperationError("accessPolicy.delete", error));
 		}
 	}
 }

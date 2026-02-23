@@ -2,7 +2,7 @@ import { UserRole } from "@domain/user/user.enums";
 import { Schema as S } from "effect";
 
 export const CreateUserDTOSchema = S.Struct({
-	workspaceId: S.String,
+	workspaceId: S.UUID,
 	email: S.String,
 	role: S.Enums(UserRole),
 	password: S.String,

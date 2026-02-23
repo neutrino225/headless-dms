@@ -6,12 +6,8 @@ import type { Paginated, PaginationOptions } from "./pagination";
 export type RepositoryResult<T, E = Error> = Result<T, E>;
 
 export abstract class BaseRepository<T extends BaseEntity<string>> {
-	abstract insert(
-		entity: T,
-	): Promise<RepositoryResult<Option<T>, AlreadyExistsError>>;
-	abstract update(
-		entity: T,
-	): Promise<RepositoryResult<Option<T>, NotFoundError>>;
+	abstract insert(entity: T): Promise<RepositoryResult<Option<T>, Error>>;
+	abstract update(entity: T): Promise<RepositoryResult<Option<T>, Error>>;
 
 	fetchAll?(): Promise<RepositoryResult<Option<T[]>>>;
 	fetchPaginated?(

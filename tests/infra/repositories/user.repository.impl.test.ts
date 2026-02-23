@@ -48,7 +48,10 @@ describe("UserRepositoryImpl Mocked Unit Tests", () => {
 
 		it("should return UserAlreadyExistsError on DB failure", async () => {
 			const user = makeUser();
-			dbMock.values.mockRejectedValue(new Error("Unique constraint violation"));
+			const pgError = Object.assign(new Error("Unique constraint violation"), {
+				code: "23505",
+			});
+			dbMock.values.mockRejectedValue(pgError);
 
 			const result = await repository.insert(user);
 

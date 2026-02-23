@@ -40,14 +40,25 @@ export function createRouter(deps: RouterDependencies) {
 			authBase,
 			deps.userWorkflows,
 			deps.jwtSecret,
+			deps.logger,
 		),
-		document: createDocumentProcedures(authBase, deps.documentWorkflows),
-		upload: createUploadProcedures(authBase, deps.uploadWorkflows),
+		document: createDocumentProcedures(
+			authBase,
+			deps.documentWorkflows,
+			deps.logger,
+		),
+		upload: createUploadProcedures(authBase, deps.uploadWorkflows, deps.logger),
 		accessPolicy: createAccessPolicyProcedures(
 			authBase,
 			deps.accessPolicyWorkflows,
+			deps.logger,
 		),
-		user: createUserProcedures(authBase, deps.userWorkflows),
+		user: createUserProcedures(
+			publicBase,
+			authBase,
+			deps.userWorkflows,
+			deps.logger,
+		),
 	};
 }
 
