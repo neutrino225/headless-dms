@@ -70,14 +70,16 @@ export class UserWorkflows {
 					fromResult(WorkspaceId.create(dto.workspaceId)),
 					fromResult(Email.create(dto.email)),
 				]).pipe(
-					E.map(([workspaceId, email]): CreateEntity<IUser> => ({
-						workspaceId,
-						email,
-						role: dto.role,
-						passwordHash: dto.passwordHash,
-						displayName: dto.displayName ?? null,
-						isActive: dto.isActive,
-					})),
+					E.map(
+						([workspaceId, email]): CreateEntity<IUser> => ({
+							workspaceId,
+							email,
+							role: dto.role,
+							passwordHash: dto.passwordHash,
+							displayName: dto.displayName ?? null,
+							isActive: dto.isActive,
+						}),
+					),
 					E.flatMap((data) => fromResult(User.create(data))),
 					E.flatMap((user) =>
 						repoCall(() => this.userRepository.insert(user)).pipe(

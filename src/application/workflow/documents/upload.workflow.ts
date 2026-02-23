@@ -120,7 +120,9 @@ export class UploadWorkflows {
 									sizeBytes: dto.sizeBytes,
 								}),
 							catch: (cause) =>
-								new Error(`Failed to create presigned upload URL: ${String(cause)}`),
+								new Error(
+									`Failed to create presigned upload URL: ${String(cause)}`,
+								),
 						}),
 					),
 					E.map(
@@ -167,15 +169,18 @@ export class UploadWorkflows {
 								unwrapOption(opt, new DocumentNotFoundError(dto.documentId)),
 							),
 							E.flatMap((doc) => {
-									const effectiveCaller = this.resolveCaller(caller, dto.uploadedBy);
+								const effectiveCaller = this.resolveCaller(
+									caller,
+									dto.uploadedBy,
+								);
 								return pipe(
-										effectiveCaller,
-										E.flatMap((resolved) =>
-											pipe(
-												this.requireOwnerOrAdmin(doc, resolved, "confirmUpload"),
-												E.as({ doc, effectiveCaller: resolved }),
-											),
+									effectiveCaller,
+									E.flatMap((resolved) =>
+										pipe(
+											this.requireOwnerOrAdmin(doc, resolved, "confirmUpload"),
+											E.as({ doc, effectiveCaller: resolved }),
 										),
+									),
 								);
 							}),
 							E.flatMap(({ doc, effectiveCaller }) =>
@@ -363,7 +368,9 @@ export class UploadWorkflows {
 
 		return pipe(
 			repoCall(() => this.userRepository.fetchById(fallbackUserId)),
-			E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(fallbackUserId))),
+			E.flatMap((opt) =>
+				unwrapOption(opt, new UserNotFoundError(fallbackUserId)),
+			),
 			E.map((user) => ({
 				userId: user.id,
 				role: user.role,

@@ -34,7 +34,10 @@ export interface ResolvedWorkflows {
 /**
  * Bootstrap the DI container and resolve all workflow instances.
  */
-export function bootstrapContainer(db: DB, config: AppConfig): ResolvedWorkflows {
+export function bootstrapContainer(
+	db: DB,
+	config: AppConfig,
+): ResolvedWorkflows {
 	// Register repository implementations as singletons
 	container.register(TOKENS.DocumentRepository, {
 		useValue: new DocumentRepositoryImpl(db),

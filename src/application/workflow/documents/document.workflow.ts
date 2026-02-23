@@ -79,40 +79,40 @@ export class DocumentWorkflows {
 					this.resolveCaller(caller, dto.ownerId),
 					E.flatMap((effectiveCaller) =>
 						pipe(
-					E.all([
-						fromResult(UserId.create(dto.ownerId)),
-						fromResult(MimeType.create(dto.mimeType)),
-					]),
-					E.flatMap(([ownerId, mimeType]) => {
-						const data: CreateEntity<IDocument> = {
-							name: dto.name,
-							description: Option.fromNullable(dto.description),
-							ownerId,
-							slug: dto.slug,
-							mimeType,
-							status: DocumentStatus.Active,
-							latestVersionId: Option.None,
-							metadata: Option.fromNullable(dto.metadata),
-							versions: [],
-						};
-						return fromResult(Document.create(data));
-					}),
-					E.flatMap((document) =>
-						pipe(
-							repoCall(() => this.documentRepository.insert(document)),
-							E.flatMap((opt) =>
-								unwrapOption(opt, new Error("Insert returned no document")),
-							),
-							E.tap((doc) =>
-								this.logAudit(
-									effectiveCaller.userId,
-									AuditAction.DOCUMENT_CREATED,
-									doc.id,
-									"document",
+							E.all([
+								fromResult(UserId.create(dto.ownerId)),
+								fromResult(MimeType.create(dto.mimeType)),
+							]),
+							E.flatMap(([ownerId, mimeType]) => {
+								const data: CreateEntity<IDocument> = {
+									name: dto.name,
+									description: Option.fromNullable(dto.description),
+									ownerId,
+									slug: dto.slug,
+									mimeType,
+									status: DocumentStatus.Active,
+									latestVersionId: Option.None,
+									metadata: Option.fromNullable(dto.metadata),
+									versions: [],
+								};
+								return fromResult(Document.create(data));
+							}),
+							E.flatMap((document) =>
+								pipe(
+									repoCall(() => this.documentRepository.insert(document)),
+									E.flatMap((opt) =>
+										unwrapOption(opt, new Error("Insert returned no document")),
+									),
+									E.tap((doc) =>
+										this.logAudit(
+											effectiveCaller.userId,
+											AuditAction.DOCUMENT_CREATED,
+											doc.id,
+											"document",
+										),
+									),
 								),
 							),
-						),
-					),
 						),
 					),
 				);
@@ -392,7 +392,9 @@ export class DocumentWorkflows {
 
 		return pipe(
 			repoCall(() => this.userRepository.fetchById(fallbackUserId)),
-			E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(fallbackUserId))),
+			E.flatMap((opt) =>
+				unwrapOption(opt, new UserNotFoundError(fallbackUserId)),
+			),
 			E.map((user) => ({
 				userId: user.id,
 				role: user.role,

@@ -408,7 +408,9 @@ export class AccessPolicyWorkflows {
 
 		return pipe(
 			repoCall(() => this.userRepository.fetchById(fallbackUserId)),
-			E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(fallbackUserId))),
+			E.flatMap((opt) =>
+				unwrapOption(opt, new UserNotFoundError(fallbackUserId)),
+			),
 			E.map((user) => ({
 				userId: user.id,
 				role: user.role,
