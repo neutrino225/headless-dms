@@ -1,7 +1,19 @@
-import { Result } from '@carbonteq/fp';
-import { DocumentVersionId, DocumentId, UserId, MimeType, StorageKey, Checksum } from "src/domain/utils/refined-types";
-import { DateTime } from '@domain/utils/value-objects';
-import { BaseEntity, Serialized, IEntity, CreateEntity } from 'src/domain/shared/base.entity';
+import { Result } from "@carbonteq/fp";
+import { DateTime } from "@domain/utils/value-objects";
+import {
+	BaseEntity,
+	type CreateEntity,
+	type IEntity,
+	type Serialized,
+} from "src/domain/shared/base.entity";
+import {
+	Checksum,
+	DocumentId,
+	DocumentVersionId,
+	MimeType,
+	StorageKey,
+	UserId,
+} from "src/domain/utils/refined-types";
 
 /**
  * Domain interface for DocumentVersion.
@@ -9,15 +21,15 @@ import { BaseEntity, Serialized, IEntity, CreateEntity } from 'src/domain/shared
  * Holds all the technical DNA of a specific file upload.
  */
 export interface IDocumentVersion extends IEntity<DocumentVersionId> {
-  readonly documentId: DocumentId;
-  readonly versionNumber: number;
-  readonly storageKey: StorageKey;
-  readonly mimeType: MimeType;
-  /** File size in bytes. */
-  readonly sizeBytes: number;
-  readonly checksum: Checksum;
-  /** The user who uploaded this specific version. */
-  readonly uploadedBy: UserId;
+	readonly documentId: DocumentId;
+	readonly versionNumber: number;
+	readonly storageKey: StorageKey;
+	readonly mimeType: MimeType;
+	/** File size in bytes. */
+	readonly sizeBytes: number;
+	readonly checksum: Checksum;
+	/** The user who uploaded this specific version. */
+	readonly uploadedBy: UserId;
 }
 
 /**
@@ -25,70 +37,75 @@ export interface IDocumentVersion extends IEntity<DocumentVersionId> {
  */
 export type SerializedDocumentVersion = Serialized<IDocumentVersion>;
 
-export class DocumentVersion extends BaseEntity<DocumentVersionId> implements IDocumentVersion {
-  readonly documentId: DocumentId;
-  readonly versionNumber: number;
-  readonly storageKey: StorageKey;
-  readonly mimeType: MimeType;
-  readonly sizeBytes: number;
-  readonly checksum: Checksum;
-  readonly uploadedBy: UserId;
+export class DocumentVersion
+	extends BaseEntity<DocumentVersionId>
+	implements IDocumentVersion
+{
+	readonly documentId: DocumentId;
+	readonly versionNumber: number;
+	readonly storageKey: StorageKey;
+	readonly mimeType: MimeType;
+	readonly sizeBytes: number;
+	readonly checksum: Checksum;
+	readonly uploadedBy: UserId;
 
-  private constructor(data: IDocumentVersion) {
-    super(data);
-    this.documentId = data.documentId;
-    this.versionNumber = data.versionNumber;
-    this.storageKey = data.storageKey;
-    this.mimeType = data.mimeType;
-    this.sizeBytes = data.sizeBytes;
-    this.checksum = data.checksum;
-    this.uploadedBy = data.uploadedBy;
-  }
+	private constructor(data: IDocumentVersion) {
+		super(data);
+		this.documentId = data.documentId;
+		this.versionNumber = data.versionNumber;
+		this.storageKey = data.storageKey;
+		this.mimeType = data.mimeType;
+		this.sizeBytes = data.sizeBytes;
+		this.checksum = data.checksum;
+		this.uploadedBy = data.uploadedBy;
+	}
 
-  /**
-   * Factory: creates a new DocumentVersion with a generated ID.
-   * updatedAt mirrors createdAt since versions are immutable.
-   */
-  static create(data: CreateEntity<IDocumentVersion>): Result<DocumentVersion, Error> {
-    const now = DateTime.now();
-    return Result.Ok(
-      new DocumentVersion({
-        ...data,
-        id: DocumentVersionId.init(),
-        createdAt: now,
-        updatedAt: now,
-      })
-    );
-  }
+	/**
+	 * Factory: creates a new DocumentVersion with a generated ID.
+	 * updatedAt mirrors createdAt since versions are immutable.
+	 */
+	static create(
+		data: CreateEntity<IDocumentVersion>,
+	): Result<DocumentVersion, Error> {
+		const now = DateTime.now();
+		return Result.Ok(
+			new DocumentVersion({
+				...data,
+				id: DocumentVersionId.init(),
+				createdAt: now,
+				updatedAt: now,
+			}),
+		);
+	}
 
-  /**
-   * Factory: rehydrates a DocumentVersion from its serialized (persistence) form.
-   */
-  static fromSerialized(raw: SerializedDocumentVersion): DocumentVersion {
-    return new DocumentVersion({
-      id: DocumentVersionId.fromTrusted(raw.id),
-      documentId: DocumentId.fromTrusted(raw.documentId),
-      versionNumber: raw.versionNumber,
-      storageKey: StorageKey.fromTrusted(raw.storageKey),
-      mimeType: MimeType.fromTrusted(raw.mimeType),
-      sizeBytes: Number(raw.sizeBytes),
-      checksum: Checksum.fromTrusted(raw.checksum),
-      uploadedBy: UserId.fromTrusted(raw.uploadedBy),
-      createdAt: DateTime.from(raw.createdAt),
-      updatedAt: DateTime.from(raw.updatedAt),
-    });
-  }
+	/**
+	 * Factory: rehydrates a DocumentVersion from its serialized (persistence) form.
+	 */
+	static fromSerialized(raw: SerializedDocumentVersion): DocumentVersion {
+		return new DocumentVersion({
+			id: DocumentVersionId.fromTrusted(raw.id),
+			documentId: DocumentId.fromTrusted(raw.documentId),
+			versionNumber: raw.versionNumber,
+			storageKey: StorageKey.fromTrusted(raw.storageKey),
+			mimeType: MimeType.fromTrusted(raw.mimeType),
+			sizeBytes: Number(raw.sizeBytes),
+			checksum: Checksum.fromTrusted(raw.checksum),
+			uploadedBy: UserId.fromTrusted(raw.uploadedBy),
+			createdAt: DateTime.from(raw.createdAt),
+			updatedAt: DateTime.from(raw.updatedAt),
+		});
+	}
 
-  serialize(): SerializedDocumentVersion {
-    return {
-      ...this._serialize(),
-      documentId: DocumentId.toString(this.documentId),
-      versionNumber: this.versionNumber,
-      storageKey: StorageKey.toString(this.storageKey),
-      mimeType: MimeType.toString(this.mimeType),
-      sizeBytes: this.sizeBytes,
-      checksum: Checksum.toString(this.checksum),
-      uploadedBy: UserId.toString(this.uploadedBy),
-    };
-  }
+	serialize(): SerializedDocumentVersion {
+		return {
+			...this._serialize(),
+			documentId: DocumentId.toString(this.documentId),
+			versionNumber: this.versionNumber,
+			storageKey: StorageKey.toString(this.storageKey),
+			mimeType: MimeType.toString(this.mimeType),
+			sizeBytes: this.sizeBytes,
+			checksum: Checksum.toString(this.checksum),
+			uploadedBy: UserId.toString(this.uploadedBy),
+		};
+	}
 }

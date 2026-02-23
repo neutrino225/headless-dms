@@ -1,7 +1,6 @@
-import { Option } from '@carbonteq/fp';
-
-import { UUID } from "src/domain/utils/refined-types"
-import { DateTime } from "@domain/utils/value-objects"
+import type { Option } from "@carbonteq/fp";
+import type { DateTime } from "@domain/utils/value-objects";
+import type { UUID } from "src/domain/utils/refined-types";
 
 /**
  * Base interface for all domain entities.
@@ -9,9 +8,9 @@ import { DateTime } from "@domain/utils/value-objects"
  * (e.g., DocumentId, UserId) while still satisfying the base contract.
  */
 export interface IEntity<TId extends string = UUID> {
-  readonly id: TId;
-  readonly createdAt: DateTime;
-  readonly updatedAt: DateTime;
+	readonly id: TId;
+	readonly createdAt: DateTime;
+	readonly updatedAt: DateTime;
 }
 
 /**
@@ -23,64 +22,62 @@ export interface IEntity<TId extends string = UUID> {
  * - Arrays → recursively serialized
  */
 export type Serialized<T> = {
-  [K in keyof T]: T[K] extends DateTime
-    ? string
-    : T[K] extends string
-      ? string
-      : T[K] extends number
-        ? number
-        : T[K] extends boolean
-          ? boolean
-          : T[K] extends Option<infer U>
-            ? U extends DateTime
-              ? string | null
-              : U extends string
-                ? string | null
-                : Serialized<U> | null
-          : T[K] extends (infer U)[]
-            ? Serialized<U>[]
-            : T[K] extends object
-              ? Serialized<T[K]>
-              : T[K];
+	[K in keyof T]: T[K] extends DateTime
+		? string
+		: T[K] extends string
+			? string
+			: T[K] extends number
+				? number
+				: T[K] extends boolean
+					? boolean
+					: T[K] extends Option<infer U>
+						? U extends DateTime
+							? string | null
+							: U extends string
+								? string | null
+								: Serialized<U> | null
+						: T[K] extends (infer U)[]
+							? Serialized<U>[]
+							: T[K] extends object
+								? Serialized<T[K]>
+								: T[K];
 };
-
 
 /**
  * Utility type for entity creation - omits auto-generated fields
  */
 export type CreateEntity<T extends IEntity<string>> = Omit<
-  T,
-  'id' | 'createdAt' | 'updatedAt'
+	T,
+	"id" | "createdAt" | "updatedAt"
 >;
-
 
 // We declare the props shape every entity must receive
 export interface BaseEntityProps<TId extends string = UUID> {
-  readonly id: TId
-  readonly createdAt: DateTime
-  readonly updatedAt: DateTime
+	readonly id: TId;
+	readonly createdAt: DateTime;
+	readonly updatedAt: DateTime;
 }
 
 export abstract class BaseEntity<TId extends string = UUID> {
-  readonly id: TId
-  readonly createdAt: DateTime
-  readonly updatedAt: DateTime
+	readonly id: TId;
+	readonly createdAt: DateTime;
+	readonly updatedAt: DateTime;
 
-  protected constructor(props: BaseEntityProps<TId>) {
-    this.id = props.id
-    this.createdAt = props.createdAt
-    this.updatedAt = props.updatedAt
-  }
+	protected constructor(props: BaseEntityProps<TId>) {
+		this.id = props.id;
+		this.createdAt = props.createdAt;
+		this.updatedAt = props.updatedAt;
+	}
 
-  protected _serialize(): { id: string; createdAt: string; updatedAt: string } {
-    return {
-      id: this.id,
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
-    }
-  }
+	protected _serialize(): { id: string; createdAt: string; updatedAt: string } {
+		return {
+			id: this.id,
+			createdAt: this.createdAt.toISOString(),
+			updatedAt: this.updatedAt.toISOString(),
+		};
+	}
 
-  equals(other: BaseEntity<TId>): boolean {
-    return this.id === other.id
-  }
+	equals(other: BaseEntity<TId>): boolean {
+		return this.id === other.id;
+	}
 }

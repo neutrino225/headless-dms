@@ -1,5 +1,5 @@
-import { User } from './user.entity';
-import { UserRole } from './user.enums';
+import type { User } from "./user.entity";
+import { UserRole } from "./user.enums";
 
 /**
  * Guards for the User domain.
@@ -10,5 +10,5 @@ import { UserRole } from './user.enums';
  * Returns true if the user has the ADMIN role.
  */
 export function isAdmin(user: User): boolean {
-  return user.role === UserRole.ADMIN;
+	return user.role === UserRole.ADMIN;
 }

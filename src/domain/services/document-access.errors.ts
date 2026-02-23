@@ -1,5 +1,5 @@
-import { UnauthorizedError, NotFoundError } from '@domain/shared/base.errors';
-import { AccessLevel } from 'src/domain/document/document.enums';
+import { ForbiddenError, NotFoundError } from "@domain/shared/base.errors";
+import type { AccessLevel } from "src/domain/document/document.enums";
 
 /**
  * Errors for the DocumentAccessService.
@@ -11,14 +11,14 @@ import { AccessLevel } from 'src/domain/document/document.enums';
  * Raised when a user attempts an action they do not have permission for.
  * Covers all four denial paths: no policy, insufficient level, not owner, not admin.
  */
-export class DocumentAccessDeniedError extends UnauthorizedError {
-  readonly code = 'DOCUMENT_ACCESS_DENIED';
+export class DocumentAccessDeniedError extends ForbiddenError {
+	readonly code = "DOCUMENT_ACCESS_DENIED";
 
-  constructor(userId: string, documentId: string, requiredLevel: AccessLevel) {
-    super(
-      `User ${userId} does not have ${requiredLevel} access on document ${documentId}`,
-    );
-  }
+	constructor(userId: string, documentId: string, requiredLevel: AccessLevel) {
+		super(
+			`User ${userId} does not have ${requiredLevel} access on document ${documentId}`,
+		);
+	}
 }
 
 /**
@@ -26,15 +26,15 @@ export class DocumentAccessDeniedError extends UnauthorizedError {
  * and the user is neither the owner nor an admin.
  */
 export class NoAccessPolicyError extends NotFoundError {
-  readonly code = 'NO_ACCESS_POLICY';
+	readonly code = "NO_ACCESS_POLICY";
 
-  constructor(userId: string, documentId: string) {
-    super(
-      `No access policy found for user ${userId} on document ${documentId}`,
-    );
-  }
+	constructor(userId: string, documentId: string) {
+		super(
+			`No access policy found for user ${userId} on document ${documentId}`,
+		);
+	}
 }
 
 export type DocumentAccessError =
-  | DocumentAccessDeniedError
-  | NoAccessPolicyError;
+	| DocumentAccessDeniedError
+	| NoAccessPolicyError;

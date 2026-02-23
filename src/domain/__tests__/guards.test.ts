@@ -1,91 +1,96 @@
-import { describe, it, expect } from 'vitest';
-import { isArchived, isOwner } from 'src/domain/document/document.guards';
-import { isAdmin } from 'src/domain/user/user.guards';
-import { hasAccess } from 'src/domain/access-policy/access-policy.guards';
-import { AccessLevel, DocumentStatus } from 'src/domain/document/document.enums';
-import { UserRole } from 'src/domain/user/user.enums';
+import { hasAccess } from "src/domain/access-policy/access-policy.guards";
 import {
-  makeDocument,
-  makeDocumentWithStatus,
-  makeUser,
-  makeAdminUser,
-  makeAccessPolicy,
-  TEST_IDS,
-} from './factories';
+	AccessLevel,
+	DocumentStatus,
+} from "src/domain/document/document.enums";
+import { isArchived, isOwner } from "src/domain/document/document.guards";
+import { UserRole } from "src/domain/user/user.enums";
+import { isAdmin } from "src/domain/user/user.guards";
+import { describe, expect, it } from "vitest";
+import {
+	makeAccessPolicy,
+	makeAdminUser,
+	makeDocument,
+	makeDocumentWithStatus,
+	makeUser,
+	TEST_IDS,
+} from "./factories";
 
-describe('document.guards', () => {
-  describe('isArchived()', () => {
-    it('returns true for an archived document', () => {
-      expect(isArchived(makeDocumentWithStatus(DocumentStatus.Archived))).toBe(true);
-    });
+describe("document.guards", () => {
+	describe("isArchived()", () => {
+		it("returns true for an archived document", () => {
+			expect(isArchived(makeDocumentWithStatus(DocumentStatus.Archived))).toBe(
+				true,
+			);
+		});
 
-    it('returns false for an active document', () => {
-      expect(isArchived(makeDocument())).toBe(false);
-    });
-  });
+		it("returns false for an active document", () => {
+			expect(isArchived(makeDocument())).toBe(false);
+		});
+	});
 
-  describe('isOwner()', () => {
-    it('returns true when the user is the document owner', () => {
-      const doc = makeDocument({ ownerId: TEST_IDS.user1 });
-      expect(isOwner(doc, TEST_IDS.user1)).toBe(true);
-    });
+	describe("isOwner()", () => {
+		it("returns true when the user is the document owner", () => {
+			const doc = makeDocument({ ownerId: TEST_IDS.user1 });
+			expect(isOwner(doc, TEST_IDS.user1)).toBe(true);
+		});
 
-    it('returns false when the user is not the owner', () => {
-      const doc = makeDocument({ ownerId: TEST_IDS.user1 });
-      expect(isOwner(doc, TEST_IDS.user2)).toBe(false);
-    });
-  });
+		it("returns false when the user is not the owner", () => {
+			const doc = makeDocument({ ownerId: TEST_IDS.user1 });
+			expect(isOwner(doc, TEST_IDS.user2)).toBe(false);
+		});
+	});
 });
 
-describe('user.guards', () => {
-  describe('isAdmin()', () => {
-    it('returns true for an admin user', () => {
-      expect(isAdmin(makeAdminUser())).toBe(true);
-    });
+describe("user.guards", () => {
+	describe("isAdmin()", () => {
+		it("returns true for an admin user", () => {
+			expect(isAdmin(makeAdminUser())).toBe(true);
+		});
 
-    it('returns false for a regular user', () => {
-      expect(isAdmin(makeUser({ role: UserRole.USER }))).toBe(false);
-    });
-  });
+		it("returns false for a regular user", () => {
+			expect(isAdmin(makeUser({ role: UserRole.USER }))).toBe(false);
+		});
+	});
 });
 
-describe('access-policy.guards', () => {
-  describe('hasAccess()', () => {
-    it('READ policy grants READ access', () => {
-      const policy = makeAccessPolicy({ accessLevel: AccessLevel.READ });
-      expect(hasAccess(policy, AccessLevel.READ)).toBe(true);
-    });
+describe("access-policy.guards", () => {
+	describe("hasAccess()", () => {
+		it("READ policy grants READ access", () => {
+			const policy = makeAccessPolicy({ accessLevel: AccessLevel.READ });
+			expect(hasAccess(policy, AccessLevel.READ)).toBe(true);
+		});
 
-    it('READ policy denies WRITE access', () => {
-      const policy = makeAccessPolicy({ accessLevel: AccessLevel.READ });
-      expect(hasAccess(policy, AccessLevel.WRITE)).toBe(false);
-    });
+		it("READ policy denies WRITE access", () => {
+			const policy = makeAccessPolicy({ accessLevel: AccessLevel.READ });
+			expect(hasAccess(policy, AccessLevel.WRITE)).toBe(false);
+		});
 
-    it('READ policy denies DELETE access', () => {
-      const policy = makeAccessPolicy({ accessLevel: AccessLevel.READ });
-      expect(hasAccess(policy, AccessLevel.DELETE)).toBe(false);
-    });
+		it("READ policy denies DELETE access", () => {
+			const policy = makeAccessPolicy({ accessLevel: AccessLevel.READ });
+			expect(hasAccess(policy, AccessLevel.DELETE)).toBe(false);
+		});
 
-    it('WRITE policy grants READ access (hierarchy)', () => {
-      const policy = makeAccessPolicy({ accessLevel: AccessLevel.WRITE });
-      expect(hasAccess(policy, AccessLevel.READ)).toBe(true);
-    });
+		it("WRITE policy grants READ access (hierarchy)", () => {
+			const policy = makeAccessPolicy({ accessLevel: AccessLevel.WRITE });
+			expect(hasAccess(policy, AccessLevel.READ)).toBe(true);
+		});
 
-    it('WRITE policy grants WRITE access', () => {
-      const policy = makeAccessPolicy({ accessLevel: AccessLevel.WRITE });
-      expect(hasAccess(policy, AccessLevel.WRITE)).toBe(true);
-    });
+		it("WRITE policy grants WRITE access", () => {
+			const policy = makeAccessPolicy({ accessLevel: AccessLevel.WRITE });
+			expect(hasAccess(policy, AccessLevel.WRITE)).toBe(true);
+		});
 
-    it('WRITE policy denies DELETE access', () => {
-      const policy = makeAccessPolicy({ accessLevel: AccessLevel.WRITE });
-      expect(hasAccess(policy, AccessLevel.DELETE)).toBe(false);
-    });
+		it("WRITE policy denies DELETE access", () => {
+			const policy = makeAccessPolicy({ accessLevel: AccessLevel.WRITE });
+			expect(hasAccess(policy, AccessLevel.DELETE)).toBe(false);
+		});
 
-    it('DELETE policy grants all access levels', () => {
-      const policy = makeAccessPolicy({ accessLevel: AccessLevel.DELETE });
-      expect(hasAccess(policy, AccessLevel.READ)).toBe(true);
-      expect(hasAccess(policy, AccessLevel.WRITE)).toBe(true);
-      expect(hasAccess(policy, AccessLevel.DELETE)).toBe(true);
-    });
-  });
+		it("DELETE policy grants all access levels", () => {
+			const policy = makeAccessPolicy({ accessLevel: AccessLevel.DELETE });
+			expect(hasAccess(policy, AccessLevel.READ)).toBe(true);
+			expect(hasAccess(policy, AccessLevel.WRITE)).toBe(true);
+			expect(hasAccess(policy, AccessLevel.DELETE)).toBe(true);
+		});
+	});
 });

@@ -1,33 +1,77 @@
-import { Result, Option } from "@carbonteq/fp";
-import { Document } from "./document.entity";
-import { DocumentVersion } from "./document-version.entity";
-import {
-  DocumentNotFoundError,
-  DocumentValidationError,
-  DocumentDomainError,
+import type { Option } from "@carbonteq/fp";
+import type {
+	BaseRepository,
+	RepositoryResult,
+} from "@domain/shared/base.repository";
+import type { Paginated, PaginationOptions } from "@domain/shared/pagination";
+import type { Document } from "./document.entity";
+import type { DocumentStatus } from "./document.enums";
+import type {
+	DocumentNotFoundError,
+	DocumentValidationError,
+	DocumentVersionNotFoundError,
 } from "./document.errors";
-import { BaseRepository, RepositoryResult } from "@domain/shared/base.repository";
-import { Paginated, PaginationOptions } from "@domain/shared/pagination";
-import { DocumentId, UserId } from "@domain/utils/refined-types";
-import { DocumentStatus, AccessLevel } from "./document.enums";
+import type { DocumentVersion } from "./document-version.entity";
 
 /**
  * Minimal Document repository.
- * Complex queries, search, and access control should be handled by application services.
+ * Acts as the entry point for the Document aggregate.
+ * Handles both the Document root and its versions.
  */
 export interface DocumentRepository extends BaseRepository<Document> {
-  fetchById(id: string): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>>;
-  
-  fetchBySlug(slug: string): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>>;
-  
-  insert(entity: Document): Promise<RepositoryResult<Option<Document>, DocumentValidationError>>;
-  
-  update(entity: Document): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>>;
-  
-  delete(id: string): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>>;
+	fetchById(
+		id: string,
+	): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>>;
 
-  findPaginated(
-    options: PaginationOptions,
-    filters?: { status?: DocumentStatus; ownerId?: string }
-  ): Promise<RepositoryResult<Paginated<Document>>>;
+	fetchBySlug(
+		slug: string,
+	): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>>;
+
+	insert(
+		entity: Document,
+	): Promise<RepositoryResult<Option<Document>, DocumentValidationError>>;
+
+	update(
+		entity: Document,
+	): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>>;
+
+	delete(
+		id: string,
+	): Promise<RepositoryResult<Option<Document>, DocumentNotFoundError>>;
+
+	findPaginated(
+		options: PaginationOptions,
+		filters?: { status?: DocumentStatus; ownerId?: string },
+	): Promise<RepositoryResult<Paginated<Document>>>;
+
+	// ─── Version management ───────────────────────────────────────────────────
+
+	fetchVersionById(
+		id: string,
+	): Promise<
+		RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>
+	>;
+
+	fetchVersionsByDocumentId(
+		documentId: string,
+		options: PaginationOptions,
+	): Promise<RepositoryResult<Paginated<DocumentVersion>>>;
+
+	fetchLatestVersionByDocumentId(
+		documentId: string,
+	): Promise<
+		RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>
+	>;
+
+	fetchVersionByStorageKey(
+		storageKey: string,
+	): Promise<
+		RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>
+	>;
+
+	deleteVersion(
+		versionId: string,
+	): Promise<
+		RepositoryResult<Option<DocumentVersion>, DocumentVersionNotFoundError>
+	>;
 }

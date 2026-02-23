@@ -1,11 +1,11 @@
-import { count, SQL } from "drizzle-orm";
 import { Result } from "@carbonteq/fp";
-import { Paginated, PaginationOptions } from "@domain/shared/pagination";
-import { PgTableWithColumns } from "drizzle-orm/pg-core";
+import type { Paginated, PaginationOptions } from "@domain/shared/pagination";
+import { count, type SQL } from "drizzle-orm";
+import type { PgTableWithColumns } from "drizzle-orm/pg-core";
 
 /**
  * Shared Drizzle-specific pagination utility for repositories.
- * 
+ *
  * @param db - Drizzle DB instance
  * @param table - The Drizzle table to query
  * @param options - Pagination options (pageNum, pageSize, offset)
@@ -14,49 +14,47 @@ import { PgTableWithColumns } from "drizzle-orm/pg-core";
  * @param orderBy - Optional Drizzle order by clause
  * @returns A Result containing Paginated data or an Error
  */
-export async function fetchPaginated<TTable extends PgTableWithColumns<any>, TDomain>(
-  db: any,
-  table: TTable,
-  options: PaginationOptions,
-  toDomain: (raw: any) => TDomain,
-  whereClause?: SQL | undefined,
-  orderBy?: SQL | SQL[] | undefined
+export async function fetchPaginated<
+	TTable extends PgTableWithColumns<any>,
+	TDomain,
+>(
+	db: any,
+	table: TTable,
+	options: PaginationOptions,
+	toDomain: (raw: any) => TDomain,
+	whereClause?: SQL | undefined,
+	orderBy?: SQL | SQL[] | undefined,
 ): Promise<Result<Paginated<TDomain>, Error>> {
-  try {
-    const { pageSize, offset, pageNum } = options;
+	try {
+		const { pageSize, offset, pageNum } = options;
 
-    // Get total count
-    const [countRow] = await db
-      .select({ total: count() })
-      .from(table)
-      .where(whereClause);
+		// Get total count
+		const [countRow] = await db
+			.select({ total: count() })
+			.from(table)
+			.where(whereClause);
 
-    const totalItems = Number(countRow.total);
-    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+		const totalItems = Number(countRow.total);
+		const totalPages = Math.ceil(totalItems / pageSize) || 1;
 
-    // Get data
-    let query = db
-      .select()
-      .from(table)
-      .where(whereClause);
-    
-    if (orderBy) {
-      query = query.orderBy(orderBy);
-    }
+		// Get data
+		let query = db.select().from(table).where(whereClause);
 
-    const rawRows = await query
-      .limit(pageSize)
-      .offset(offset - pageSize);
+		if (orderBy) {
+			query = query.orderBy(orderBy);
+		}
 
-    const items = rawRows.map(toDomain);
+		const rawRows = await query.limit(pageSize).offset(offset - pageSize);
 
-    return Result.Ok({
-      data: items,
-      pageNum,
-      pageSize,
-      totalPages,
-    });
-  } catch (error) {
-    return Result.Err(error as Error);
-  }
+		const items = rawRows.map(toDomain);
+
+		return Result.Ok({
+			data: items,
+			pageNum,
+			pageSize,
+			totalPages,
+		});
+	} catch (error) {
+		return Result.Err(error as Error);
+	}
 }

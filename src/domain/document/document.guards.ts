@@ -1,6 +1,6 @@
-import { Document } from './document.entity';
-import { DocumentStatus } from './document.enums';
-import { UserId } from 'src/domain/utils/refined-types';
+import { UserId } from "src/domain/utils/refined-types";
+import type { Document } from "./document.entity";
+import { DocumentStatus } from "./document.enums";
 
 /**
  * Guards for the Document domain.
@@ -11,12 +11,12 @@ import { UserId } from 'src/domain/utils/refined-types';
  * Returns true if the document has been archived (status === Archived).
  */
 export function isArchived(doc: Document): boolean {
-  return doc.status === DocumentStatus.Archived;
+	return doc.status === DocumentStatus.Archived;
 }
 
 /**
  * Returns true if the given user is the owner of the document.
  */
 export function isOwner(doc: Document, userId: UserId): boolean {
-  return UserId.toString(doc.ownerId) === UserId.toString(userId);
+	return UserId.toString(doc.ownerId) === UserId.toString(userId);
 }
