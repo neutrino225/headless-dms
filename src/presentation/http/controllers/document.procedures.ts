@@ -37,6 +37,7 @@ function callerFrom(ctx: AuthContext): CallerContext {
 export function createDocumentProcedures(
 	authBase: ProcedureBuilderWithMiddleware,
 	workflows: DocumentWorkflows,
+	logger?: Logger,
 ) {
 	const createDocument = authBase
 		.input(toStandard(CreateDocumentDTOSchema))

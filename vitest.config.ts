@@ -19,7 +19,6 @@ export default defineConfig({
     hookTimeout: runIntegration ? 300_000 : 10_000,
     testTimeout: runIntegration ? 300_000 : 10_000,
     maxWorkers: runIntegration ? 1 : undefined,
-    minWorkers: runIntegration ? 1 : undefined,
   },
   resolve: {
     alias: {

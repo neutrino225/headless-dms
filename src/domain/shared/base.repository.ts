@@ -13,15 +13,15 @@ export abstract class BaseRepository<T extends BaseEntity<string>> {
 	fetchPaginated?(
 		options: PaginationOptions,
 	): Promise<RepositoryResult<Option<Paginated<T>>>>;
-	fetchById?(id: string): Promise<RepositoryResult<Option<T>, NotFoundError>>;
-	deleteById?(id: string): Promise<RepositoryResult<Option<T>, NotFoundError>>;
+	fetchById?(id: string): Promise<RepositoryResult<Option<T>, Error>>;
+	deleteById?(id: string): Promise<RepositoryResult<Option<T>, Error>>;
 	fetchBy?<U extends keyof T>(
 		prop: U,
 		val: T[U],
-	): Promise<RepositoryResult<Option<T>, NotFoundError>>;
+	): Promise<RepositoryResult<Option<T>, Error>>;
 	existsBy?(prop: string, val: any): Promise<RepositoryResult<boolean>>;
 	deleteBy?<U extends keyof T>(
 		prop: U,
 		val: T[U],
-	): Promise<RepositoryResult<Option<T>, NotFoundError>>;
+	): Promise<RepositoryResult<Option<T>, Error>>;
 }

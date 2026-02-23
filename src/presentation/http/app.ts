@@ -70,7 +70,7 @@ export function createApp({ router, corsOrigin, logger }: CreateAppOptions) {
 		// We clone the request to avoid locking the stream for oRPC
 		const req = c.req.raw.clone();
 
-		const { matched, response } = await handler.handle(req, {
+		const { matched, response } = await handler.handle(req as any, {
 			prefix: "/rpc",
 			context: {
 				headers: req.headers,
