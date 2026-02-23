@@ -4,8 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "lint": "biome check src tests",
-    "lint:fix": "biome check src tests --write --unsafe",
+    "lint": "biome check src tests --diagnostic-level=error",
+    "lint:all": "biome check src tests",
+    "lint:fix": "biome check src tests --write --unsafe --diagnostic-level=error",
     "fmt:dry": "biome format src",
     "fmt": "biome format src --write",
     "dev": "bun run --watch src/index.ts",

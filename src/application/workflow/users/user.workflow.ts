@@ -1,36 +1,36 @@
 import "reflect-metadata";
 
-import type { CallerContext } from "@application/workflow/caller-context";
-import { User, IUser } from "@domain/user/user.entity";
 import {
-	EmailAlreadyTakenError,
-	UserAlreadyExistsError,
-	UserNotFoundError,
-} from "@domain/user/user.errors";
-import { UserRole } from "@domain/user/user.enums";
-import { Email, WorkspaceId } from "@domain/utils";
+	type CreateUserDTOEncoded,
+	CreateUserDTOSchema,
+	type RemoveUserDTOEncoded,
+	RemoveUserDTOSchema,
+	type UpdateUserDTOEncoded,
+	UpdateUserDTOSchema,
+} from "@application/dto/user/user.dto";
+import type { CallerContext } from "@application/workflow/caller-context";
+import {
+	fromResult,
+	repoCall,
+	unwrapOption,
+} from "@application/workflow/workflow.utils";
 import {
 	AdminRequiredError,
 	InsufficientPermissionsError,
 } from "@domain/shared/authorization.errors";
-import { TOKENS } from "@infra/di/container/tokens";
-import { inject, injectable } from "tsyringe";
+import type { CreateEntity } from "@domain/shared/base.entity";
+import { type IUser, User } from "@domain/user/user.entity";
+import { UserRole } from "@domain/user/user.enums";
+import {
+	type EmailAlreadyTakenError,
+	type UserAlreadyExistsError,
+	UserNotFoundError,
+} from "@domain/user/user.errors";
 import type { UserRepository } from "@domain/user/user.repository";
+import { Email, WorkspaceId } from "@domain/utils";
+import { TOKENS } from "@infra/di/container/tokens";
 import { Effect as E, Schema as S } from "effect";
-import {
-	CreateUserDTOEncoded,
-	CreateUserDTOSchema,
-	UpdateUserDTOEncoded,
-	UpdateUserDTOSchema,
-	RemoveUserDTOEncoded,
-	RemoveUserDTOSchema,
-} from "@application/dto/user/user.dto";
-import {
-	fromResult,
-	unwrapOption,
-	repoCall,
-} from "@application/workflow/workflow.utils";
-import { CreateEntity } from "@domain/shared/base.entity";
+import { inject, injectable } from "tsyringe";
 
 type CreateUserError =
 	| Error

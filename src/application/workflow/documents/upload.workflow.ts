@@ -1,56 +1,55 @@
 import "reflect-metadata";
 
-import { Option } from "@carbonteq/fp";
+import {
+	type ConfirmUploadDTOEncoded,
+	ConfirmUploadDTOSchema,
+	type InitiateUploadDTOEncoded,
+	InitiateUploadDTOSchema,
+	type ListDocumentVersionsDTOEncoded,
+	ListDocumentVersionsDTOSchema,
+} from "@application/dto/document/document.dto";
 import type { ObjectStoragePort } from "@application/services/object-storage.port";
 import type { CallerContext } from "@application/workflow/caller-context";
 import {
 	fromResult,
-	unwrapOption,
 	repoCall,
+	unwrapOption,
 } from "@application/workflow/workflow.utils";
 import {
-	InitiateUploadDTOEncoded,
-	InitiateUploadDTOSchema,
-	ConfirmUploadDTOEncoded,
-	ConfirmUploadDTOSchema,
-	ListDocumentVersionsDTOEncoded,
-	ListDocumentVersionsDTOSchema,
-} from "@application/dto/document/document.dto";
-import { Document } from "@domain/document/document.entity";
-import {
-	DocumentVersion,
-	IDocumentVersion,
-} from "@domain/document/document-version.entity";
+	AuditLog,
+	type AuditResourceType,
+	type IAuditLog,
+} from "@domain/audit-log/audit-log.entity";
+import { AuditAction } from "@domain/audit-log/audit-log.enums";
+import type { AuditLogRepository } from "@domain/audit-log/audit-log.repository";
+import type { Document } from "@domain/document/document.entity";
 import {
 	DocumentNotFoundError,
 	DocumentVersionNotFoundError,
 } from "@domain/document/document.errors";
 import { isOwner } from "@domain/document/document.guards";
 import type { DocumentRepository } from "@domain/document/document.repository";
+import {
+	DocumentVersion,
+	type IDocumentVersion,
+} from "@domain/document/document-version.entity";
+import { InsufficientPermissionsError } from "@domain/shared/authorization.errors";
+import type { CreateEntity } from "@domain/shared/base.entity";
+import { type Paginated, PaginationOptions } from "@domain/shared/pagination";
+import { UserRole } from "@domain/user/user.enums";
 import { UserNotFoundError } from "@domain/user/user.errors";
 import type { UserRepository } from "@domain/user/user.repository";
 import {
-	AuditLog,
-	IAuditLog,
-	AuditResourceType,
-} from "@domain/audit-log/audit-log.entity";
-import { AuditAction } from "@domain/audit-log/audit-log.enums";
-import type { AuditLogRepository } from "@domain/audit-log/audit-log.repository";
-import {
+	Checksum,
 	DocumentId,
-	UserId,
 	MimeType,
 	StorageKey,
-	Checksum,
+	UserId,
 	UUID,
 } from "@domain/utils";
-import { InsufficientPermissionsError } from "@domain/shared/authorization.errors";
-import { CreateEntity } from "@domain/shared/base.entity";
-import { PaginationOptions, Paginated } from "@domain/shared/pagination";
-import { UserRole } from "@domain/user/user.enums";
 import { TOKENS } from "@infra/di/container/tokens";
-import { inject, injectable } from "tsyringe";
 import { Effect as E, pipe, Schema as S } from "effect";
+import { inject, injectable } from "tsyringe";
 
 type UploadWorkflowError =
 	| Error

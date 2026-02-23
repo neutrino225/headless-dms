@@ -1,52 +1,50 @@
 import "reflect-metadata";
 
-import { Option } from "@carbonteq/fp";
+import {
+	type CheckAccessDTOEncoded,
+	CheckAccessDTOSchema,
+	type GrantAccessDTOEncoded,
+	GrantAccessDTOSchema,
+	type RevokeAccessDTOEncoded,
+	RevokeAccessDTOSchema,
+	type UpdateAccessDTOEncoded,
+	UpdateAccessDTOSchema,
+} from "@application/dto/access-policy/access-policy.dto";
 import type { CallerContext } from "@application/workflow/caller-context";
 import {
 	fromResult,
-	unwrapOption,
 	repoCall,
+	unwrapOption,
 } from "@application/workflow/workflow.utils";
 import {
-	GrantAccessDTOEncoded,
-	GrantAccessDTOSchema,
-	UpdateAccessDTOEncoded,
-	UpdateAccessDTOSchema,
-	RevokeAccessDTOEncoded,
-	RevokeAccessDTOSchema,
-	CheckAccessDTOEncoded,
-	CheckAccessDTOSchema,
-} from "@application/dto/access-policy/access-policy.dto";
-import {
 	AccessPolicy,
-	IAccessPolicy,
+	type IAccessPolicy,
 } from "@domain/access-policy/access-policy.entity";
 import {
+	type AccessDeniedError,
 	AccessPolicyNotFoundError,
-	AccessDeniedError,
 } from "@domain/access-policy/access-policy.errors";
 import type { AccessPolicyRepository } from "@domain/access-policy/access-policy.repository";
-import type { DocumentRepository } from "@domain/document/document.repository";
-import { isOwner } from "@domain/document/document.guards";
-import type { UserRepository } from "@domain/user/user.repository";
-import { DocumentNotFoundError } from "@domain/document/document.errors";
-import { UserNotFoundError } from "@domain/user/user.errors";
-import { canAccess } from "@domain/services/document-access.service";
 import {
 	AuditLog,
-	IAuditLog,
-	AuditResourceType,
+	type AuditResourceType,
+	type IAuditLog,
 } from "@domain/audit-log/audit-log.entity";
 import { AuditAction } from "@domain/audit-log/audit-log.enums";
 import type { AuditLogRepository } from "@domain/audit-log/audit-log.repository";
-import { DocumentId, UserId, UUID } from "@domain/utils";
+import { DocumentNotFoundError } from "@domain/document/document.errors";
+import { isOwner } from "@domain/document/document.guards";
+import type { DocumentRepository } from "@domain/document/document.repository";
+import { canAccess } from "@domain/services/document-access.service";
 import { InsufficientPermissionsError } from "@domain/shared/authorization.errors";
-import { CreateEntity } from "@domain/shared/base.entity";
-import { AccessLevel } from "@domain/document/document.enums";
+import type { CreateEntity } from "@domain/shared/base.entity";
 import { UserRole } from "@domain/user/user.enums";
+import { UserNotFoundError } from "@domain/user/user.errors";
+import type { UserRepository } from "@domain/user/user.repository";
+import { DocumentId, UserId, UUID } from "@domain/utils";
 import { TOKENS } from "@infra/di/container/tokens";
-import { inject, injectable } from "tsyringe";
 import { Effect as E, pipe, Schema as S } from "effect";
+import { inject, injectable } from "tsyringe";
 
 type AccessPolicyWorkflowError =
 	| Error

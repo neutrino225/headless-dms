@@ -1,17 +1,17 @@
 import "reflect-metadata";
+import { Document } from "@domain/document/document.entity";
+import { DocumentStatus } from "@domain/document/document.enums";
+import { PaginationOptions } from "@domain/shared/pagination";
+import { DocumentRepositoryImpl } from "@infra/repositories/document.repository.impl";
+import { UserRepositoryImpl } from "@infra/repositories/user.repository.impl";
 import {
 	makeDocument,
 	makeDocumentVersion,
 	makeUser,
-} from "@domain/__tests__/factories";
-import { Document } from "@domain/document/document.entity";
-import { DocumentStatus } from "@domain/document/document.enums";
-import { PaginationOptions } from "@domain/shared/pagination";
+} from "@tests/domain/factories";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { TestDbContainer } from "../../__tests__/utils/test-db";
-import { DocumentRepositoryImpl } from "../document.repository.impl";
-import { UserRepositoryImpl } from "../user.repository.impl";
+import { TestDbContainer } from "../utils/test-db";
 
 /**
  * E2E Workflow Test: Simplified document lifecycle using minimal repository methods

@@ -1,47 +1,47 @@
 import "reflect-metadata";
 
-import { Option } from "@carbonteq/fp";
 import {
-	CreateDocumentDTOEncoded,
-	CreateDocumentDTOSchema,
-	UpdateDocumentDTOEncoded,
-	UpdateDocumentDTOSchema,
-	DeleteDocumentDTOEncoded,
-	DeleteDocumentDTOSchema,
-	ChangeDocumentStatusDTOEncoded,
+	type ChangeDocumentStatusDTOEncoded,
 	ChangeDocumentStatusDTOSchema,
-	ListDocumentsDTOEncoded,
+	type CreateDocumentDTOEncoded,
+	CreateDocumentDTOSchema,
+	type DeleteDocumentDTOEncoded,
+	DeleteDocumentDTOSchema,
+	type ListDocumentsDTOEncoded,
 	ListDocumentsDTOSchema,
+	type UpdateDocumentDTOEncoded,
+	UpdateDocumentDTOSchema,
 } from "@application/dto/document/document.dto";
 import type { CallerContext } from "@application/workflow/caller-context";
 import {
 	fromResult,
-	unwrapOption,
 	repoCall,
+	unwrapOption,
 } from "@application/workflow/workflow.utils";
+import { Option } from "@carbonteq/fp";
 import {
 	AuditLog,
-	IAuditLog,
-	AuditResourceType,
+	type AuditResourceType,
+	type IAuditLog,
 } from "@domain/audit-log/audit-log.entity";
 import { AuditAction } from "@domain/audit-log/audit-log.enums";
 import type { AuditLogRepository } from "@domain/audit-log/audit-log.repository";
-import { Document, IDocument } from "@domain/document/document.entity";
+import { Document, type IDocument } from "@domain/document/document.entity";
 import { DocumentStatus } from "@domain/document/document.enums";
 import {
+	type DocumentArchivedError,
 	DocumentNotFoundError,
-	DocumentValidationError,
-	DocumentArchivedError,
+	type DocumentValidationError,
 } from "@domain/document/document.errors";
 import { isOwner } from "@domain/document/document.guards";
 import type { DocumentRepository } from "@domain/document/document.repository";
 import { InsufficientPermissionsError } from "@domain/shared/authorization.errors";
-import { CreateEntity } from "@domain/shared/base.entity";
-import { Paginated, PaginationOptions } from "@domain/shared/pagination";
-import { UserNotFoundError } from "@domain/user/user.errors";
+import type { CreateEntity } from "@domain/shared/base.entity";
+import { type Paginated, PaginationOptions } from "@domain/shared/pagination";
 import { UserRole } from "@domain/user/user.enums";
+import { UserNotFoundError } from "@domain/user/user.errors";
 import type { UserRepository } from "@domain/user/user.repository";
-import { UserId, MimeType, DocumentId, UUID } from "@domain/utils";
+import { MimeType, UserId, UUID } from "@domain/utils";
 import { TOKENS } from "@infra/di/container/tokens";
 import { Effect as E, pipe, Schema as S } from "effect";
 import { inject, injectable } from "tsyringe";

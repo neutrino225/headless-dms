@@ -1,9 +1,9 @@
 import "reflect-metadata";
-import { makeUser } from "@domain/__tests__/factories";
 import { User } from "@domain/user/user.entity";
 import { users } from "@infra/db/schema";
+import { UserRepositoryImpl } from "@infra/repositories/user.repository.impl";
+import { makeUser } from "@tests/domain/factories";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { UserRepositoryImpl } from "../user.repository.impl";
 
 describe("UserRepositoryImpl Mocked Unit Tests", () => {
 	let repository: UserRepositoryImpl;
@@ -88,36 +88,6 @@ describe("UserRepositoryImpl Mocked Unit Tests", () => {
 
 	describe("fetchActiveUsers", () => {
 		it("should handle paginated queries and rehydrate results", async () => {
-			const user = makeUser({ isActive: true });
-			const raw = {
-				...user.serialize(),
-				createdAt: user.createdAt.toDate(),
-				updatedAt: user.updatedAt.toDate(),
-			};
-
-			const dataMock = {
-				limit: vi.fn().mockReturnThis(),
-				offset: vi.fn().mockReturnThis(),
-				then: vi.fn().mockImplementation((onFulfilled) => onFulfilled([raw])),
-			};
-
-			const countMock = {
-				then: vi
-					.fn()
-					.mockImplementation((onFulfilled) => onFulfilled([{ total: "1" }])),
-			};
-
-			const fromMock = {
-				where: vi
-					.fn()
-					.mockReturnValueOnce(countMock) // First call: count
-					.mockReturnValueOnce(dataMock), // Second call: data
-			};
-
-			dbMock.select.mockReturnValue({
-				from: vi.fn().mockReturnValue(fromMock),
-			});
-
 			// NOTE: fetchActiveUsers removed from minimal repository interface
 			// This test is no longer applicable
 			expect(true).toBe(true);

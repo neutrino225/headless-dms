@@ -28,8 +28,8 @@
       "@presentation/*": [
         "src/presentation/*"
       ],
-      "@shared/*": [
-        "src/shared/*"
+      "@tests/*": [
+        "tests/*"
       ]
     },
     "skipLibCheck": true

@@ -7,7 +7,7 @@ import {
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
-import * as schema from "../../db/schema";
+import * as schema from "../../../src/infra/db/schema";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,7 +30,10 @@ export class TestDbContainer {
 
 		// Run migrations
 		await migrate(this.db, {
-			migrationsFolder: path.resolve(__dirname, "../../db/migrations"),
+			migrationsFolder: path.resolve(
+				__dirname,
+				"../../../src/infra/db/migrations",
+			),
 		});
 
 		return { db: this.db, container: this.container };

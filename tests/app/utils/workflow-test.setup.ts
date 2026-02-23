@@ -10,12 +10,12 @@ import { AccessPolicyWorkflows } from "@application/workflow/documents/accessPol
 import { DocumentWorkflows } from "@application/workflow/documents/document.workflow";
 import { UploadWorkflows } from "@application/workflow/documents/upload.workflow";
 import { UserWorkflows } from "@application/workflow/users/user.workflow";
-import { TestDbContainer } from "@infra/__tests__/utils/test-db";
 import { AccessPolicyRepositoryImpl } from "@infra/repositories/access-policy.repository.impl";
 import { AuditLogRepositoryImpl } from "@infra/repositories/audit-log.repository.impl";
 import { DocumentRepositoryImpl } from "@infra/repositories/document.repository.impl";
 import { UserRepositoryImpl } from "@infra/repositories/user.repository.impl";
 import { MinioObjectStorageService } from "@infra/services/minio-object-storage.service";
+import { TestDbContainer } from "@tests/infra/utils/test-db";
 import { sql } from "drizzle-orm";
 
 export interface WorkflowTestContext {

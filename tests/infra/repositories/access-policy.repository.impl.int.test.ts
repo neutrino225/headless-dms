@@ -1,16 +1,16 @@
 import "reflect-metadata";
+import { AccessLevel } from "@domain/document/document.enums";
+import { AccessPolicyRepositoryImpl } from "@infra/repositories/access-policy.repository.impl";
+import { DocumentRepositoryImpl } from "@infra/repositories/document.repository.impl";
+import { UserRepositoryImpl } from "@infra/repositories/user.repository.impl";
 import {
 	makeAccessPolicy,
 	makeDocument,
 	makeUser,
-} from "@domain/__tests__/factories";
-import { AccessLevel } from "@domain/document/document.enums";
+} from "@tests/domain/factories";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { TestDbContainer } from "../../__tests__/utils/test-db";
-import { AccessPolicyRepositoryImpl } from "../access-policy.repository.impl";
-import { DocumentRepositoryImpl } from "../document.repository.impl";
-import { UserRepositoryImpl } from "../user.repository.impl";
+import { TestDbContainer } from "../utils/test-db";
 
 describe("AccessPolicyRepositoryImpl Integration Tests", () => {
 	let testDb: TestDbContainer;

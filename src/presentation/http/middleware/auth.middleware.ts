@@ -8,9 +8,9 @@
  * Also propagates the correlation ID from the initial context.
  */
 
+import type { Logger } from "@infra/logger/logger";
 import { ORPCError, os } from "@orpc/server";
 import jwt from "jsonwebtoken";
-import type { Logger } from "@infra/logger/logger";
 import type { InitialContext, JwtPayload } from "./context";
 
 function isValidJwtPayload(value: unknown): value is JwtPayload {

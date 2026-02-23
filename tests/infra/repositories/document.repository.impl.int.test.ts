@@ -1,14 +1,10 @@
 import "reflect-metadata";
-import {
-	makeDocument,
-	makeUser,
-	type TEST_IDS,
-} from "@domain/__tests__/factories";
+import { DocumentRepositoryImpl } from "@infra/repositories/document.repository.impl";
+import { UserRepositoryImpl } from "@infra/repositories/user.repository.impl";
+import { makeDocument, makeUser, type TEST_IDS } from "@tests/domain/factories";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { TestDbContainer } from "../../__tests__/utils/test-db";
-import { DocumentRepositoryImpl } from "../document.repository.impl";
-import { UserRepositoryImpl } from "../user.repository.impl";
+import { TestDbContainer } from "../utils/test-db";
 
 describe("DocumentRepositoryImpl Integration Tests", () => {
 	let testDb: TestDbContainer;
