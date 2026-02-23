@@ -5,7 +5,7 @@ export const CreateUserDTOSchema = S.Struct({
 	workspaceId: S.String,
 	email: S.String,
 	role: S.Enums(UserRole),
-	passwordHash: S.String,
+	password: S.String,
 	displayName: S.optional(S.String),
 	isActive: S.Boolean,
 });
@@ -16,7 +16,7 @@ export type CreateUserDTOEncoded = S.Schema.Encoded<typeof CreateUserDTOSchema>;
 export const UpdateUserDTOSchema = CreateUserDTOSchema.pick(
 	"email",
 	"role",
-	"passwordHash",
+	"password",
 	"displayName",
 	"isActive",
 )

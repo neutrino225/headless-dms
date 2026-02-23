@@ -8,11 +8,12 @@ import {
 	makeDocument,
 	makeUser,
 } from "@tests/domain/factories";
+import { describeIntegration } from "@tests/utils/integration";
 import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import { TestDbContainer } from "../utils/test-db";
 
-describe("AccessPolicyRepositoryImpl Integration Tests", () => {
+describeIntegration("AccessPolicyRepositoryImpl Integration Tests", () => {
 	let testDb: TestDbContainer;
 	let repository: AccessPolicyRepositoryImpl;
 	let documentRepository: DocumentRepositoryImpl;

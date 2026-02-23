@@ -1,7 +1,8 @@
 import "reflect-metadata";
 import { AccessLevel, DocumentStatus } from "@domain/document/document.enums";
 import { UserRole } from "@domain/user/user.enums";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { describeIntegration } from "@tests/utils/integration";
+import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import {
 	makeChangeStatusCommand,
 	makeCheckAccessQuery,
@@ -33,7 +34,7 @@ import {
  * This test exercises the entire application layer through real workflows
  * backed by a real PostgreSQL database (via Testcontainers).
  */
-describe("Full Document Lifecycle Integration Tests", () => {
+describeIntegration("Full Document Lifecycle Integration Tests", () => {
 	let ctx: WorkflowTestContext;
 
 	beforeAll(async () => {

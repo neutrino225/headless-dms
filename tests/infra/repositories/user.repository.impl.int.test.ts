@@ -1,11 +1,12 @@
 import "reflect-metadata";
 import { UserRepositoryImpl } from "@infra/repositories/user.repository.impl";
 import { makeUser } from "@tests/domain/factories";
+import { describeIntegration } from "@tests/utils/integration";
 import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import { TestDbContainer } from "../utils/test-db";
 
-describe("UserRepositoryImpl Integration Tests", () => {
+describeIntegration("UserRepositoryImpl Integration Tests", () => {
 	let testDb: TestDbContainer;
 	let repository: UserRepositoryImpl;
 

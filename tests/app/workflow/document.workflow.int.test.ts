@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { DocumentStatus } from "@domain/document/document.enums";
 import { DocumentNotFoundError } from "@domain/document/document.errors";
+import { describeIntegration } from "@tests/utils/integration";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
 	makeChangeStatusCommand,
@@ -19,7 +20,7 @@ import {
 	type WorkflowTestContext,
 } from "../utils/workflow-test.setup";
 
-describe("DocumentWorkflows Integration Tests", () => {
+describeIntegration("DocumentWorkflows Integration Tests", () => {
 	let ctx: WorkflowTestContext;
 
 	beforeAll(async () => {

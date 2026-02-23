@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { UserRole } from "@domain/user/user.enums";
 import { UserNotFoundError } from "@domain/user/user.errors";
+import { describeIntegration } from "@tests/utils/integration";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
 	makeCreateAdminCommand,
@@ -17,7 +18,7 @@ import {
 	type WorkflowTestContext,
 } from "../utils/workflow-test.setup";
 
-describe("UserWorkflows Integration Tests", () => {
+describeIntegration("UserWorkflows Integration Tests", () => {
 	let ctx: WorkflowTestContext;
 
 	beforeAll(async () => {

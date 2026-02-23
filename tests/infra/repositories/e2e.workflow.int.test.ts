@@ -9,14 +9,15 @@ import {
 	makeDocumentVersion,
 	makeUser,
 } from "@tests/domain/factories";
+import { describeIntegration } from "@tests/utils/integration";
 import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import { TestDbContainer } from "../utils/test-db";
 
 /**
  * E2E Workflow Test: Simplified document lifecycle using minimal repository methods
  */
-describe("E2E Document Workflow", () => {
+describeIntegration("E2E Document Workflow", () => {
 	let testDb: TestDbContainer;
 	let documentRepository: DocumentRepositoryImpl;
 	let userRepository: UserRepositoryImpl;

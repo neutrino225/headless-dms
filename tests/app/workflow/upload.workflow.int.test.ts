@@ -3,6 +3,7 @@ import {
 	DocumentNotFoundError,
 	DocumentVersionNotFoundError,
 } from "@domain/document/document.errors";
+import { describeIntegration } from "@tests/utils/integration";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
 	makeConfirmUploadCommand,
@@ -21,7 +22,7 @@ import {
 	type WorkflowTestContext,
 } from "../utils/workflow-test.setup";
 
-describe("UploadWorkflows Integration Tests", () => {
+describeIntegration("UploadWorkflows Integration Tests", () => {
 	let ctx: WorkflowTestContext;
 
 	beforeAll(async () => {

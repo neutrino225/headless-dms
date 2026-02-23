@@ -29,6 +29,13 @@ if (needsConfig) {
 	}
 }
 
+// Disable Ryuk for Podman compatibility if not already set
+if (process.env.TESTCONTAINERS_RYUK_DISABLED === undefined) {
+	process.env.TESTCONTAINERS_RYUK_DISABLED = "true";
+	console.log("[Test Setup] Disabling Ryuk for Podman compatibility");
+}
+
+
 // Podman often requires Ryuk to be disabled or configured differently
 if (process.env.TESTCONTAINERS_RYUK_DISABLED === undefined) {
 	process.env.TESTCONTAINERS_RYUK_DISABLED = "true";

@@ -4,6 +4,7 @@ import { AccessLevel } from "@domain/document/document.enums";
 import { DocumentNotFoundError } from "@domain/document/document.errors";
 import { UserRole } from "@domain/user/user.enums";
 import { UserNotFoundError } from "@domain/user/user.errors";
+import { describeIntegration } from "@tests/utils/integration";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
 	makeCheckAccessQuery,
@@ -23,7 +24,7 @@ import {
 	type WorkflowTestContext,
 } from "../utils/workflow-test.setup";
 
-describe("AccessPolicyWorkflows Integration Tests", () => {
+describeIntegration("AccessPolicyWorkflows Integration Tests", () => {
 	let ctx: WorkflowTestContext;
 
 	beforeAll(async () => {

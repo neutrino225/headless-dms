@@ -25,10 +25,12 @@ import {
 	type EmailAlreadyTakenError,
 	type UserAlreadyExistsError,
 	UserNotFoundError,
+	UserUnauthorizedError,
 } from "@domain/user/user.errors";
 import type { UserRepository } from "@domain/user/user.repository";
 import { Email, WorkspaceId } from "@domain/utils";
 import { TOKENS } from "@infra/di/container/tokens";
+import bcrypt from "bcryptjs";
 import { Effect as E, Schema as S } from "effect";
 import { inject, injectable } from "tsyringe";
 
@@ -40,6 +42,7 @@ type CreateUserError =
 type UpdateUserError = Error | UserNotFoundError | InsufficientPermissionsError;
 type DeleteUserError = Error | UserNotFoundError | AdminRequiredError;
 type GetUserError = Error | UserNotFoundError;
+type AuthenticateUserError = Error | UserNotFoundError | UserUnauthorizedError;
 
 @injectable()
 export class UserWorkflows {
@@ -48,11 +51,6 @@ export class UserWorkflows {
 		private readonly userRepository: UserRepository,
 	) {}
 
-	// ── Mutations (require CallerContext for authz) ────────────────────────
-
-	/**
-	 * Create a new user. Only admins may create users.
-	 */
 	createUser(
 		input: CreateUserDTOEncoded,
 		caller?: CallerContext,
@@ -69,13 +67,18 @@ export class UserWorkflows {
 				E.all([
 					fromResult(WorkspaceId.create(dto.workspaceId)),
 					fromResult(Email.create(dto.email)),
+					E.tryPromise({
+						try: () => bcrypt.hash(dto.password, 10),
+						catch: (cause) =>
+							new Error(`Failed to hash password: ${String(cause)}`),
+					}),
 				]).pipe(
 					E.map(
-						([workspaceId, email]): CreateEntity<IUser> => ({
+						([workspaceId, email, passwordHash]): CreateEntity<IUser> => ({
 							workspaceId,
 							email,
 							role: dto.role,
-							passwordHash: dto.passwordHash,
+							passwordHash,
 							displayName: dto.displayName ?? null,
 							isActive: dto.isActive,
 						}),
@@ -93,9 +96,6 @@ export class UserWorkflows {
 		);
 	}
 
-	/**
-	 * Update a user. Admins may update any user; regular users may only update themselves.
-	 */
 	updateUser(
 		input: UpdateUserDTOEncoded,
 		caller?: CallerContext,
@@ -109,18 +109,28 @@ export class UserWorkflows {
 			E.flatMap((dto) =>
 				repoCall(() => this.userRepository.fetchById(dto.id)).pipe(
 					E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(dto.id))),
-					E.map((existing) => {
-						const serialized = existing.serialize();
-						return User.fromSerialized({
-							...serialized,
-							email: dto.email ?? serialized.email,
-							role: dto.role ?? serialized.role,
-							passwordHash: dto.passwordHash ?? serialized.passwordHash,
-							displayName: dto.displayName ?? serialized.displayName,
-							isActive: dto.isActive ?? serialized.isActive,
-							updatedAt: new Date().toISOString(),
-						});
-					}),
+					E.flatMap((existing) =>
+						E.tryPromise({
+							try: async () => {
+								const serialized = existing.serialize();
+								const passwordHash = dto.password
+									? await bcrypt.hash(dto.password, 10)
+									: serialized.passwordHash;
+
+								return User.fromSerialized({
+									...serialized,
+									email: dto.email ?? serialized.email,
+									role: dto.role ?? serialized.role,
+									passwordHash,
+									displayName: dto.displayName ?? serialized.displayName,
+									isActive: dto.isActive ?? serialized.isActive,
+									updatedAt: new Date().toISOString(),
+								});
+							},
+							catch: (cause) =>
+								new Error(`Failed to hash password: ${String(cause)}`),
+						}),
+					),
 					E.flatMap((updated) =>
 						repoCall(() => this.userRepository.update(updated)).pipe(
 							E.flatMap((opt) =>
@@ -133,9 +143,6 @@ export class UserWorkflows {
 		);
 	}
 
-	/**
-	 * Delete a user. Only admins may delete users.
-	 */
 	deleteUser(
 		input: RemoveUserDTOEncoded,
 		caller?: CallerContext,
@@ -156,8 +163,6 @@ export class UserWorkflows {
 		);
 	}
 
-	// ── Queries (no authz required — any authenticated user) ──────────────
-
 	getUserById(id: string): E.Effect<User, GetUserError> {
 		return repoCall(() => this.userRepository.fetchById(id)).pipe(
 			E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(id))),
@@ -170,7 +175,32 @@ export class UserWorkflows {
 		);
 	}
 
-	// ── Authorization ─────────────────────────────────────────────────────
+	authenticateUser(
+		email: string,
+		password: string,
+	): E.Effect<User, AuthenticateUserError> {
+		return repoCall(() => this.userRepository.fetchByEmail(email)).pipe(
+			E.flatMap((opt) => unwrapOption(opt, new UserNotFoundError(email))),
+			E.flatMap((user) =>
+				E.tryPromise({
+					try: async () => {
+						if (!user.isActive) {
+							throw new UserUnauthorizedError("User account is inactive");
+						}
+						const ok = await bcrypt.compare(password, user.passwordHash);
+						if (!ok) {
+							throw new UserUnauthorizedError("Invalid credentials");
+						}
+						return user;
+					},
+					catch: (cause) =>
+						cause instanceof UserUnauthorizedError
+							? cause
+							: new Error(`Authentication failed: ${String(cause)}`),
+				}),
+			),
+		);
+	}
 
 	private requireAdminOrSelf(
 		caller: CallerContext,

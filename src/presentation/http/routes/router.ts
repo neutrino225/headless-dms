@@ -11,6 +11,7 @@ import type { UserWorkflows } from "@application/workflow/users/user.workflow";
 import type { Logger } from "@infra/logger/logger";
 import { os } from "@orpc/server";
 import { createAccessPolicyProcedures } from "../controllers/access-policy.procedures";
+import { createAuthProcedures } from "../controllers/auth.procedures";
 import { createDocumentProcedures } from "../controllers/document.procedures";
 import { createUploadProcedures } from "../controllers/upload.procedures";
 import { createUserProcedures } from "../controllers/user.procedures";
@@ -29,10 +30,17 @@ export interface RouterDependencies {
 export function createRouter(deps: RouterDependencies) {
 	const authMiddleware = createAuthMiddleware(deps.jwtSecret, deps.logger);
 
+	const publicBase = os.$context<InitialContext>();
 	// Base builder: requires InitialContext (headers + correlationId), auth middleware adds `user`
 	const authBase = os.$context<InitialContext>().use(authMiddleware);
 
 	return {
+		auth: createAuthProcedures(
+			publicBase,
+			authBase,
+			deps.userWorkflows,
+			deps.jwtSecret,
+		),
 		document: createDocumentProcedures(authBase, deps.documentWorkflows),
 		upload: createUploadProcedures(authBase, deps.uploadWorkflows),
 		accessPolicy: createAccessPolicyProcedures(

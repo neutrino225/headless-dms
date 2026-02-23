@@ -37,7 +37,7 @@ export interface CreateUserCommandOverrides {
 	workspaceId?: string;
 	email?: string;
 	role?: UserRole;
-	passwordHash?: string;
+	password?: string;
 	displayName?: string;
 	isActive?: boolean;
 }
@@ -49,9 +49,7 @@ export function makeCreateUserCommand(
 		workspaceId: overrides.workspaceId ?? crypto.randomUUID(),
 		email: overrides.email ?? faker.internet.email().toLowerCase(),
 		role: overrides.role ?? UserRole.USER,
-		passwordHash:
-			overrides.passwordHash ??
-			"$2b$10$hashedpasswordfortesting1234567890abcdef",
+		password: overrides.password ?? "password123",
 		displayName: overrides.displayName ?? faker.person.fullName(),
 		isActive: overrides.isActive ?? true,
 	};
@@ -67,7 +65,7 @@ export interface UpdateUserCommandOverrides {
 	id: string;
 	email?: string;
 	role?: UserRole;
-	passwordHash?: string;
+	password?: string;
 	displayName?: string;
 	isActive?: boolean;
 }
@@ -79,8 +77,8 @@ export function makeUpdateUserCommand(
 		id: overrides.id,
 		...(overrides.email !== undefined && { email: overrides.email }),
 		...(overrides.role !== undefined && { role: overrides.role }),
-		...(overrides.passwordHash !== undefined && {
-			passwordHash: overrides.passwordHash,
+		...(overrides.password !== undefined && {
+			password: overrides.password,
 		}),
 		...(overrides.displayName !== undefined && {
 			displayName: overrides.displayName,
