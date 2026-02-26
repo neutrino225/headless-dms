@@ -13,6 +13,7 @@
     "build": "tsc",
     "start": "bun run src/index.ts",
     "test": "vitest run",
+    "test:all": "RUN_INT_TESTS=1 vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:generate": "bun run drizzle-kit generate",

@@ -8,7 +8,7 @@ import * as z from "zod";
  */
 export const UserIdType = createRefinedType(
 	"UserId",
-	z.string().uuid().toLowerCase(),
+	z.uuid().toLowerCase(),
 );
 
 export type UserId = typeof UserIdType.$infer;

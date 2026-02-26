@@ -8,7 +8,7 @@ import * as z from "zod";
  */
 export const DocumentIdType = createRefinedType(
 	"DocumentId",
-	z.string().uuid().toLowerCase(),
+	z.uuid().toLowerCase(),
 );
 
 export type DocumentId = typeof DocumentIdType.$infer;

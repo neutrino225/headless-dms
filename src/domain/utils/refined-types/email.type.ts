@@ -11,7 +11,6 @@ import * as z from "zod";
 export const EmailType = createRefinedType(
 	"Email",
 	z
-		.string()
 		.email("Invalid email format")
 		.max(254, "Email must be 254 characters or less")
 		.toLowerCase(),
